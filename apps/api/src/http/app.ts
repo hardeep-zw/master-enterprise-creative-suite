@@ -18,6 +18,9 @@ import { assetRouter } from "../modules/assets/assetRoutes.js";
 import { adminRouter } from "../modules/admin/adminRoutes.js";
 import { workspaceRouter } from "../modules/workspaces/workspaceRoutes.js";
 import { imageRouter } from "../modules/imageGeneration/imageRoutes.js";
+import { textRouter } from "../modules/textGeneration/textRoutes.js";
+import { audioRouter } from "../modules/audioGeneration/audioRoutes.js";
+import { presentationRouter } from "../modules/presentation/presentationRoutes.js";
 
 const ALLOWED_ORIGIN_PATTERNS = [
   /^http:\/\/localhost(:\d+)?$/,
@@ -58,6 +61,9 @@ export function createExpressApp(): Express {
   // 4. Mount Domain Module Routers with Route-Specific Rate Limiters
   app.use("/api/ai", aiRateLimiter, aiRouter);
   app.use("/api/images", aiRateLimiter, imageRouter);
+  app.use("/api/text", aiRateLimiter, textRouter);
+  app.use("/api/audio", aiRateLimiter, audioRouter);
+  app.use("/api/presentation", aiRateLimiter, presentationRouter);
   app.use("/api/campaign", aiRateLimiter, campaignRouter);
   app.use("/api/payment", billingRateLimiter, billingRouter);
   app.use("/api/contact-sales", salesRateLimiter, salesRouter);

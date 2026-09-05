@@ -7,6 +7,8 @@ import { getQuotaErrorMessage } from '@web/infrastructure/ai/geminiClient.js';
 import { loadPreferences, savePreferences } from '@web/lib/preferences.js';
 import { downloadFile } from '@web/lib/utils.js';
 import { apiClient } from '@web/infrastructure/api/apiClient.js';
+import { presentationClient } from '@web/features/slideshow/services/presentationClient.js';
+import { triggerGlobalCreditGate } from '@web/features/billing/context/CreditGateContext.js';
 
 export interface GemExecutionState {
   prompt: string;
@@ -20,9 +22,15 @@ export interface GemExecutionState {
   videoDuration: string;
   videoShotType: 'Single Shot' | 'Multi-Shot Sequence' | 'Cinematic Storytelling';
   imageStyle: string;
-  voiceEmotion: 'Neutral' | 'Cheerful' | 'Energetic' | 'Professional' | 'Calming';
+  voiceEmotion: 'Neutral' | 'Cheerful' | 'Energetic' | 'Professional' | 'Calming' | 'Dramatic';
   selectedVoice: string;
   selectedLanguage: string;
+  audioGenerationType: 'voiceover' | 'music';
+  musicMode: 'clip' | 'full-track';
+  musicGenre: string;
+  musicMood: string;
+  speakerMode: 'single' | 'two-speaker';
+  speakerTwoVoice: string;
   productContext: { id: string; name: string; data: string } | null;
   faceContext: { id: string; name: string; data: string } | null;
   firstFrameContext: { id: string; name: string; data: string } | null;
@@ -99,9 +107,15 @@ export const getDefaultGemState = (gem: Gem, guidelines?: BrandGuidelines): GemE
     videoDuration: defaultDuration,
     videoShotType: defaultShotType,
     imageStyle: 'Photorealistic, 8k resolution',
-    voiceEmotion: 'Neutral',
+    voiceEmotion: 'Professional',
     selectedVoice: loadPreferences().audioVoice || 'Kore',
     selectedLanguage: 'English',
+    audioGenerationType: 'voiceover',
+    musicMode: 'clip',
+    musicGenre: 'Cinematic Electronic',
+    musicMood: 'Uplifting',
+    speakerMode: 'single',
+    speakerTwoVoice: 'Puck',
     productContext: null,
     faceContext: null,
     firstFrameContext: null,
@@ -141,7 +155,7 @@ export interface UseCreativeExecutionOptions {
   aspectRatio?: string;
   videoShotType?: 'Single Shot' | 'Multi-Shot Sequence' | 'Cinematic Storytelling';
   imageStyle?: string;
-  voiceEmotion?: 'Neutral' | 'Cheerful' | 'Energetic' | 'Professional' | 'Calming';
+  voiceEmotion?: 'Neutral' | 'Cheerful' | 'Energetic' | 'Professional' | 'Calming' | 'Dramatic';
   selectedLanguage?: string;
   selectedVoice?: string;
   selectedPresentationTheme?: any;
@@ -174,11 +188,8 @@ export function useCreativeExecution(options: UseCreativeExecutionOptions) {
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const selectedGemRef = useRef(selectedGem);
+  selectedGemRef.current = selectedGem;
   const pollIntervalsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
-
-  useEffect(() => {
-    selectedGemRef.current = selectedGem;
-  }, [selectedGem]);
 
   // Clean up all background intervals and audio on unmount
   useEffect(() => {
@@ -207,9 +218,9 @@ export function useCreativeExecution(options: UseCreativeExecutionOptions) {
   // Helper to update active gem's state slice
   const updateActiveState = useCallback(
     (patch: Partial<GemExecutionState> | ((prev: GemExecutionState) => Partial<GemExecutionState>)) => {
-      const activeGemId = selectedGemRef.current.id;
+      const activeGemId = selectedGem.id;
       setGemStates(prev => {
-        const current = prev[activeGemId] || getDefaultGemState(selectedGemRef.current, brandGuidelines);
+        const current = prev[activeGemId] || getDefaultGemState(selectedGem, brandGuidelines);
         const updates = typeof patch === 'function' ? patch(current) : patch;
         return {
           ...prev,
@@ -220,7 +231,7 @@ export function useCreativeExecution(options: UseCreativeExecutionOptions) {
         };
       });
     },
-    [brandGuidelines]
+    [selectedGem, brandGuidelines]
   );
 
   // Helper to update ANY specific gem's state slice (targeted)
@@ -265,6 +276,12 @@ export function useCreativeExecution(options: UseCreativeExecutionOptions) {
     updateActiveState({ selectedVoice: val });
   }, [updateActiveState]);
   const setSelectedLanguage = useCallback((val: string) => updateActiveState({ selectedLanguage: val }), [updateActiveState]);
+  const setAudioGenerationType = useCallback((val: 'voiceover' | 'music') => updateActiveState({ audioGenerationType: val }), [updateActiveState]);
+  const setMusicMode = useCallback((val: 'clip' | 'full-track') => updateActiveState({ musicMode: val }), [updateActiveState]);
+  const setMusicGenre = useCallback((val: string) => updateActiveState({ musicGenre: val }), [updateActiveState]);
+  const setMusicMood = useCallback((val: string) => updateActiveState({ musicMood: val }), [updateActiveState]);
+  const setSpeakerMode = useCallback((val: 'single' | 'two-speaker') => updateActiveState({ speakerMode: val }), [updateActiveState]);
+  const setSpeakerTwoVoice = useCallback((val: string) => updateActiveState({ speakerTwoVoice: val }), [updateActiveState]);
   const setSelectedPresentationTheme = useCallback((val: any) => updateActiveState({ selectedPresentationTheme: val }), [updateActiveState]);
   const setProductContext = useCallback((val: any) => updateActiveState({ productContext: val }), [updateActiveState]);
   const setFaceContext = useCallback((val: any) => updateActiveState({ faceContext: val }), [updateActiveState]);
@@ -398,7 +415,8 @@ export function useCreativeExecution(options: UseCreativeExecutionOptions) {
     const currentTargetState = gemStates[targetGemId] || getDefaultGemState(targetGem, brandGuidelines);
     const targetPrompt = currentTargetState.prompt;
 
-    if (!targetPrompt.trim()) return;
+    // In-flight guard: prevent duplicate generation submissions
+    if (!targetPrompt.trim() || currentTargetState.isGenerating) return;
 
     const isSlideshow = targetGem.id === 'corporate-presentations' || targetGem.id === 'slideshow-maker';
     const existingSlideshow = currentTargetState.result?.type === 'slideshow' ? currentTargetState.result : null;
@@ -461,17 +479,47 @@ export function useCreativeExecution(options: UseCreativeExecutionOptions) {
         });
       }
 
-      // 2. Perform asynchronous generation
-      const res = await generateCreative(targetGem, fullPrompt, {
-        aspectRatio: currentTargetState.aspectRatio,
-        guidelines: brandGuidelines,
-        model: currentTargetState.selectedModel,
-        videoDuration: currentTargetState.videoDuration,
-        videoShotType: currentTargetState.videoShotType,
-        imageStyle: currentTargetState.imageStyle,
-        assets: selectedAssets,
-        bakeLogo: bakeLogoOnGeneration
-      });
+      // 2. Perform generation
+      let res: any;
+      const isCorporate = targetGem.id === 'corporate-presentations';
+
+      if (isCorporate) {
+        const presResult = await presentationClient.generatePresentation({
+          prompt: fullPrompt,
+          brandGuidelines,
+          logoAssetId: (brandGuidelines as any)?.logoAssetId || (brandGuidelines?.logo ? 'brand_logo' : undefined),
+          targetSlideCount: 6,
+          productContext: currentTargetState.productContext,
+          customTheme: currentTargetState.selectedPresentationTheme
+        });
+
+        res = {
+          type: 'slideshow',
+          document: presResult.document,
+          data: presResult.document.slides,
+          newBalance: presResult.newBalance
+        };
+      } else {
+        res = await generateCreative(targetGem, fullPrompt, {
+          aspectRatio: currentTargetState.aspectRatio,
+          guidelines: brandGuidelines,
+          model: currentTargetState.selectedModel,
+          videoDuration: currentTargetState.videoDuration,
+          videoShotType: currentTargetState.videoShotType,
+          imageStyle: currentTargetState.imageStyle,
+          assets: selectedAssets,
+          bakeLogo: bakeLogoOnGeneration,
+          voiceEmotion: currentTargetState.voiceEmotion,
+          selectedVoice: currentTargetState.selectedVoice,
+          audioGenerationType: currentTargetState.audioGenerationType,
+          musicMode: currentTargetState.musicMode,
+          musicGenre: currentTargetState.musicGenre,
+          musicMood: currentTargetState.musicMood,
+          speakerMode: currentTargetState.speakerMode,
+          speakerTwoVoice: currentTargetState.speakerTwoVoice,
+          selectedLanguageCode: currentTargetState.selectedLanguage === 'Hindi' ? 'hi-IN' : (currentTargetState.selectedLanguage === 'Marathi' ? 'mr-IN' : (currentTargetState.selectedLanguage === 'Gujarati' ? 'gu-IN' : (currentTargetState.selectedLanguage === 'Tamil' ? 'ta-IN' : (currentTargetState.selectedLanguage === 'Bengali' ? 'bn-IN' : 'en-US')))),
+        });
+      }
 
       // 3. Settle / sync authoritative credits from server
       if (res?.newBalance !== undefined) {
@@ -491,7 +539,6 @@ export function useCreativeExecution(options: UseCreativeExecutionOptions) {
         });
         startPolling(res.operation, res.concept, targetGemId, fullPrompt);
       } else if (res?.type === 'slideshow') {
-        const isCorporate = targetGem.id === 'corporate-presentations';
         const newSlides = res.data;
         const updatedSlides = isCorporate
           ? [...newSlides]
@@ -502,14 +549,15 @@ export function useCreativeExecution(options: UseCreativeExecutionOptions) {
         updateGemState(targetGemId, {
           result: updatedRes,
           isGenerating: false,
-          currentSlide: isCorporate ? 0 : updatedSlides.length - 1
+          currentSlide: 0
         });
 
         if (isCorporate) {
           const firstSlide = updatedSlides[0];
-          if (firstSlide && firstSlide.visualPrompt) {
+          const bgPrompt = firstSlide?.visualPrompt || firstSlide?.imagePrompt;
+          if (firstSlide && bgPrompt) {
             generateImage(
-              `Presentation background visual for slide titled "${firstSlide.title}": ${firstSlide.visualPrompt}`,
+              `Presentation background visual for slide titled "${firstSlide.title}": ${bgPrompt}`,
               brandGuidelines,
               currentTargetState.aspectRatio || '16:9',
               'gemini-2.5-flash-image'
@@ -517,7 +565,11 @@ export function useCreativeExecution(options: UseCreativeExecutionOptions) {
               if (bgRes?.url) {
                 const finalSlides = [...updatedSlides];
                 finalSlides[0] = { ...finalSlides[0], bgImage: bgRes.url };
-                const finalRes = { ...res, data: finalSlides };
+                const finalDoc = updatedRes.document ? {
+                  ...updatedRes.document,
+                  slides: finalSlides
+                } : undefined;
+                const finalRes = { ...res, document: finalDoc, data: finalSlides };
                 updateGemState(targetGemId, { result: finalRes });
                 addToHistory(finalRes, targetGemId, fullPrompt);
               }
@@ -606,8 +658,69 @@ export function useCreativeExecution(options: UseCreativeExecutionOptions) {
       }
     } catch (error: any) {
       console.error(`Creative generation failed for gem ${targetGemId}:`, error);
-      const quotaMsg = getQuotaErrorMessage(error);
-      const message = quotaMsg || error?.message || "Failed to generate creative. Please try again.";
+
+      // App-wide Insufficient Credits Gating Integration
+      const isInsufficientCredits =
+        error?.status === 402 ||
+        error?.code === 'INSUFFICIENT_CREDITS' ||
+        error?.data?.code === 'INSUFFICIENT_CREDITS' ||
+        error?.message?.includes('Insufficient credits');
+
+      if (isInsufficientCredits) {
+        const payload = error?.data || {};
+        const cost = payload.requiredCredits || error?.required || getActiveCost(targetGem);
+        const avail = typeof payload.availableCredits === 'number' 
+          ? payload.availableCredits 
+          : (typeof error?.available === 'number' ? error.available : credits);
+
+        // Derive user-friendly fine-grained service title
+        let serviceTitle = payload.service || targetGem.name;
+        if (targetGem.type === 'video') {
+          serviceTitle = 'Video Generation';
+        } else if (targetGem.type === 'image') {
+          const modelId = currentTargetState.selectedModel || '';
+          serviceTitle = modelId.includes('pro') || modelId.includes('dev') 
+            ? 'Flux Pro Image' 
+            : (modelId.includes('schnell') ? 'Fast Image Generation' : 'Standard Image');
+        } else if (targetGem.id === 'audio-voiceover-music') {
+          serviceTitle = currentTargetState.audioGenerationType === 'voiceover'
+            ? 'Voiceover (TTS)'
+            : (currentTargetState.musicMode === 'clip' ? 'Music Clip' : 'Music Pro (Full Track)');
+        } else if (targetGem.id === 'corporate-presentations') {
+          serviceTitle = 'Corporate Presentation';
+        }
+
+        triggerGlobalCreditGate({
+          service: serviceTitle,
+          action: payload.action || targetGem.type,
+          model: payload.model || currentTargetState.selectedModel,
+          requiredCredits: cost,
+          availableCredits: avail,
+          error: error.message
+        });
+
+        updateGemState(targetGemId, {
+          isGenerating: false,
+          error: null
+        });
+        return;
+      }
+
+      let message: string;
+      if (targetGemId === 'corporate-presentations') {
+        if (error?.code === 'PRESENTATION_QUOTA_EXHAUSTED' || error?.status === 429) {
+          message = "AI presentation model rate limit reached. Please wait a moment before trying again.";
+        } else if (error?.code === 'PRESENTATION_MODEL_UNAVAILABLE') {
+          message = "The configured presentation model is temporarily unavailable. Please try again shortly.";
+        } else if (error?.message) {
+          message = error.message;
+        } else {
+          message = "Presentation generation failed. Please try again.";
+        }
+      } else {
+        const quotaMsg = getQuotaErrorMessage(error);
+        message = quotaMsg || error?.message || "Failed to generate creative. Please try again.";
+      }
       updateGemState(targetGemId, {
         isGenerating: false,
         error: message,
@@ -877,8 +990,17 @@ export function useCreativeExecution(options: UseCreativeExecutionOptions) {
         refinePrompt: '',
         isRefining: false
       }));
-    } catch (e) {
+    } catch (e: any) {
       console.error("Failed to refine asset:", e);
+      if (e?.status === 402 || e?.code === 'INSUFFICIENT_CREDITS' || e?.message?.includes('Insufficient credits')) {
+        triggerGlobalCreditGate({
+          service: 'Creative AI Refinement',
+          action: 'image_refine',
+          model: activeState.selectedModel || 'gemini-2.5-flash-image',
+          requiredCredits: e?.requiredCredits || e?.required || 2,
+          availableCredits: credits
+        });
+      }
       updateActiveState({ isRefining: false });
     }
   };
@@ -911,6 +1033,18 @@ export function useCreativeExecution(options: UseCreativeExecutionOptions) {
     setSelectedVoice,
     selectedLanguage: activeState.selectedLanguage,
     setSelectedLanguage,
+    audioGenerationType: activeState.audioGenerationType,
+    setAudioGenerationType,
+    musicMode: activeState.musicMode,
+    setMusicMode,
+    musicGenre: activeState.musicGenre,
+    setMusicGenre,
+    musicMood: activeState.musicMood,
+    setMusicMood,
+    speakerMode: activeState.speakerMode,
+    setSpeakerMode,
+    speakerTwoVoice: activeState.speakerTwoVoice,
+    setSpeakerTwoVoice,
     productContext: activeState.productContext,
     setProductContext,
     faceContext: activeState.faceContext,

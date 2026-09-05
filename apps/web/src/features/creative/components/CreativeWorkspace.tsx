@@ -1,5 +1,5 @@
-import React from 'react';
-import { Sparkles, Layers, Image as ImageIcon, Video as VideoIcon, FileText, LayoutDashboard, Presentation, Target, BookOpen, Volume2, Music } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Sparkles, Layers, Image as ImageIcon, Video as VideoIcon, FileText, LayoutDashboard, Presentation, Target, BookOpen, Volume2, Music, Check } from 'lucide-react';
 import type { Gem } from '@shared-types/creative.js';
 import type { BrandGuidelines } from '@shared-types/brand.js';
 import type { CapabilityDetail } from '@shared-types/imageGeneration.js';
@@ -24,8 +24,8 @@ export interface CreativeWorkspaceProps {
   setImageStyle: (style: string) => void;
   bakeLogoOnGeneration: boolean;
   setBakeLogoOnGeneration: React.Dispatch<React.SetStateAction<boolean>>;
-  voiceEmotion: 'Neutral' | 'Cheerful' | 'Energetic' | 'Professional' | 'Calming';
-  setVoiceEmotion: (emotion: 'Neutral' | 'Cheerful' | 'Energetic' | 'Professional' | 'Calming') => void;
+  voiceEmotion: 'Neutral' | 'Cheerful' | 'Energetic' | 'Professional' | 'Calming' | 'Dramatic';
+  setVoiceEmotion: (emotion: 'Neutral' | 'Cheerful' | 'Energetic' | 'Professional' | 'Calming' | 'Dramatic') => void;
   // Output canvas & command bar props
   result: any;
   setResult: React.Dispatch<React.SetStateAction<any>>;
@@ -37,6 +37,18 @@ export interface CreativeWorkspaceProps {
   setSelectedLanguage: (lang: string) => void;
   selectedVoice: string;
   setSelectedVoice: (voice: string) => void;
+  audioGenerationType?: 'voiceover' | 'music';
+  setAudioGenerationType?: (val: 'voiceover' | 'music') => void;
+  musicMode?: 'clip' | 'full-track';
+  setMusicMode?: (val: 'clip' | 'full-track') => void;
+  musicGenre?: string;
+  setMusicGenre?: (val: string) => void;
+  musicMood?: string;
+  setMusicMood?: (val: string) => void;
+  speakerMode?: 'single' | 'two-speaker';
+  setSpeakerMode?: (val: 'single' | 'two-speaker') => void;
+  speakerTwoVoice?: string;
+  setSpeakerTwoVoice?: (val: string) => void;
   isGeneratingCreativePrompt: boolean;
   setIsGeneratingCreativePrompt: (val: boolean) => void;
   productContext: { id: string; name: string; data: string } | null;
@@ -166,8 +178,20 @@ export const CreativeWorkspace: React.FC<CreativeWorkspaceProps> = (props) => {
     setImageStyle,
     bakeLogoOnGeneration,
     setBakeLogoOnGeneration,
-    voiceEmotion,
+    voiceEmotion = 'Professional',
     setVoiceEmotion,
+    audioGenerationType = 'voiceover',
+    setAudioGenerationType,
+    musicMode = 'clip',
+    setMusicMode,
+    musicGenre = 'Cinematic',
+    setMusicGenre,
+    musicMood = 'Uplifting',
+    setMusicMood,
+    speakerMode = 'single',
+    setSpeakerMode,
+    speakerTwoVoice = 'Puck',
+    setSpeakerTwoVoice,
     softWarning,
     setSoftWarning,
     isRefineModalOpen,
@@ -178,6 +202,91 @@ export const CreativeWorkspace: React.FC<CreativeWorkspaceProps> = (props) => {
     handleRefineWithAI,
     handleGenerate
   } = props;
+
+  // Check for staged campaign strategy briefs
+  const [stagedBrief, setStagedBrief] = useState<any | null>(null);
+  const [stagedCampaignTitle, setStagedCampaignTitle] = useState<string>('');
+  const [isStagedDismissed, setIsStagedDismissed] = useState(false);
+  const [isBriefApplied, setIsBriefApplied] = useState(false);
+
+  useEffect(() => {
+    try {
+      const campaignTitle = localStorage.getItem('staged_campaign_title') || '';
+      setStagedCampaignTitle(campaignTitle);
+      setIsStagedDismissed(false);
+      setIsBriefApplied(false);
+
+      let rawBrief: string | null = null;
+      if (selectedGem?.type === 'text') {
+        rawBrief = localStorage.getItem('staged_text_brief');
+      } else if (selectedGem?.type === 'image') {
+        rawBrief = localStorage.getItem('staged_image_brief');
+      } else if (selectedGem?.type === 'video') {
+        rawBrief = localStorage.getItem('staged_video_brief');
+      } else if (selectedGem?.type === 'audio') {
+        rawBrief = localStorage.getItem('staged_audio_brief');
+      } else if (selectedGem?.id === 'corporate-presentations' || selectedGem?.type === 'slideshow') {
+        rawBrief = localStorage.getItem('staged_deck_brief');
+      }
+
+      if (rawBrief) {
+        const parsed = JSON.parse(rawBrief);
+        setStagedBrief(parsed);
+      } else {
+        setStagedBrief(null);
+      }
+    } catch (e) {
+      console.warn('Error reading staged brief:', e);
+      setStagedBrief(null);
+    }
+  }, [selectedGem?.id, selectedGem?.type]);
+
+  const handleApplyStagedBrief = () => {
+    if (!stagedBrief) return;
+
+    if (selectedGem.type === 'text') {
+      const p = stagedBrief.suggestedPrompt || `${stagedBrief.coreHook}\n\nAngle: ${stagedBrief.angle}\nTone: ${stagedBrief.tone}\nCTA: ${stagedBrief.callToAction}`;
+      props.setPrompt(p);
+    } else if (selectedGem.type === 'image') {
+      if (stagedBrief.prompt || stagedBrief.textlessPrompt) {
+        props.setPrompt(stagedBrief.prompt || stagedBrief.textlessPrompt);
+      }
+      if (stagedBrief.aspectRatio || stagedBrief.aspectRatios?.[0]) {
+        props.setAspectRatio(stagedBrief.aspectRatio || stagedBrief.aspectRatios[0]);
+      }
+    } else if (selectedGem.type === 'video') {
+      if (stagedBrief.prompt || stagedBrief.textlessPrompt) {
+        props.setPrompt(stagedBrief.prompt || stagedBrief.textlessPrompt);
+      }
+      if (stagedBrief.aspectRatio) {
+        props.setAspectRatio(stagedBrief.aspectRatio);
+      }
+    } else if (selectedGem.type === 'audio') {
+      if (stagedBrief.prompt || stagedBrief.spokenScriptText || stagedBrief.scriptIntent) {
+        props.setPrompt(stagedBrief.prompt || stagedBrief.spokenScriptText || stagedBrief.scriptIntent);
+      }
+      if (props.setAudioGenerationType) {
+        props.setAudioGenerationType('voiceover');
+      }
+      if (props.setSelectedLanguage && stagedBrief.language) {
+        props.setSelectedLanguage(stagedBrief.language);
+      }
+      if (props.setMusicMood && (stagedBrief.musicMood || stagedBrief.mood)) {
+        props.setMusicMood(stagedBrief.musicMood || stagedBrief.mood);
+      }
+    } else if (selectedGem.id === 'corporate-presentations' || selectedGem.type === 'slideshow') {
+      const slides = stagedBrief.slides || [];
+      const deckPrompt = `Create a ${slides.length > 0 ? `${slides.length}-slide ` : ''}corporate presentation for: ${stagedBrief.campaignTitle || stagedCampaignTitle}.\n` +
+        (slides.length > 0 ? `Key Slides: ${slides.map((s: any) => `${s.slideNumber || ''}. ${s.slideTitle || ''}`).join(', ')}` : '');
+      props.setPrompt(deckPrompt);
+    }
+
+    setIsBriefApplied(true);
+  };
+
+  const handleDismissStagedBrief = () => {
+    setIsStagedDismissed(true);
+  };
 
   const getIcon = (iconName: string) => {
     switch (iconName) {
@@ -197,6 +306,62 @@ export const CreativeWorkspace: React.FC<CreativeWorkspaceProps> = (props) => {
 
   return (
     <>
+      {/* Staged Campaign Brief Banner */}
+      {stagedBrief && !isStagedDismissed && (
+        <div className="bg-gradient-to-r from-rose-500/10 via-amber-500/10 to-emerald-500/10 border border-rose-500/20 rounded-md p-3.5 mb-3 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 shadow-xs text-left">
+          <div className="flex items-start gap-3 min-w-0">
+            <div className="p-2 bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-md shrink-0 mt-0.5">
+              <Sparkles size={16} />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-bold text-slate-900 dark:text-white">
+                  Staged from Campaign Strategist:
+                </span>
+                <span className="text-xs font-semibold text-rose-600 dark:text-rose-400">
+                  {stagedBrief.campaignTitle || stagedCampaignTitle || 'Active Campaign'}
+                </span>
+                <span className="text-[9px] uppercase font-mono px-1.5 py-0.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-bold rounded">
+                  {selectedGem.type} brief ready
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-1 mt-0.5">
+                {stagedBrief.visualConcept || stagedBrief.coreHook || stagedBrief.sceneDescription || stagedBrief.scriptIntent || stagedBrief.summary || 'Deterministic brief ready for production.'}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 w-full md:w-auto justify-end">
+            <button
+              type="button"
+              onClick={handleApplyStagedBrief}
+              disabled={isBriefApplied}
+              className={`px-3.5 py-1.5 text-xs font-bold rounded shadow-xs flex items-center gap-1.5 cursor-pointer transition-all ${
+                isBriefApplied
+                  ? 'bg-emerald-600 text-white cursor-default'
+                  : 'bg-rose-600 hover:bg-rose-700 text-white'
+              }`}
+            >
+              {isBriefApplied ? (
+                <>
+                  <Check size={13} /> Applied to Prompt
+                </>
+              ) : (
+                <>
+                  <Sparkles size={13} /> Apply to Prompt
+                </>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={handleDismissStagedBrief}
+              className="px-2.5 py-1.5 text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer transition-colors"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Gem Header */}
       <div className="space-y-2 pb-1 text-left">
         <div className="inline-flex items-center gap-2 text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">
@@ -270,7 +435,7 @@ export const CreativeWorkspace: React.FC<CreativeWorkspaceProps> = (props) => {
                 className={cn(
                   "px-3 py-1.5 rounded-sm text-xs font-bold transition-all border cursor-pointer",
                   videoShotType === type 
-                    ? "bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 border-rose-100 dark:border-rose-900/60 shadow-sm"
+                    ? "bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 border-rose-100 dark:border-rose-900/60 shadow-sm" 
                     : "border-transparent text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
                 )}
               >
@@ -328,6 +493,147 @@ export const CreativeWorkspace: React.FC<CreativeWorkspaceProps> = (props) => {
                 {emotion}
               </button>
             ))}
+          </div>
+        )}
+
+        {selectedGem.type === 'audio' && (
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Mode Switcher: Voiceover vs Music */}
+            <div className="flex items-center gap-1.5 bg-white dark:bg-slate-900 p-1.5 rounded-sm border border-slate-200 dark:border-slate-800 shadow-sm">
+              <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 px-2 uppercase tracking-wider">Mode</span>
+              <button
+                type="button"
+                onClick={() => setAudioGenerationType?.('voiceover')}
+                className={cn(
+                  "px-3 py-1.5 rounded-sm text-xs font-bold transition-all border cursor-pointer flex items-center gap-1.5",
+                  audioGenerationType !== 'music'
+                    ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-slate-900 dark:border-white"
+                    : "border-transparent text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
+                )}
+              >
+                <Volume2 size={13} />
+                <span>Voiceover (TTS)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setAudioGenerationType?.('music')}
+                className={cn(
+                  "px-3 py-1.5 rounded-sm text-xs font-bold transition-all border cursor-pointer flex items-center gap-1.5",
+                  audioGenerationType === 'music'
+                    ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-slate-900 dark:border-white"
+                    : "border-transparent text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
+                )}
+              >
+                <Music size={13} />
+                <span>Music (Lyria 3.5)</span>
+              </button>
+            </div>
+
+            {/* When Voiceover is active */}
+            {audioGenerationType !== 'music' && (
+              <>
+                <div className="flex items-center gap-1.5 bg-white dark:bg-slate-900 p-1.5 rounded-sm border border-slate-200 dark:border-slate-800 shadow-sm">
+                  <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 px-2 uppercase tracking-wider">Emotion</span>
+                  {(['Professional', 'Cheerful', 'Energetic', 'Calming', 'Dramatic'] as const).map(emotion => (
+                    <button
+                      key={emotion}
+                      type="button"
+                      onClick={() => setVoiceEmotion(emotion)}
+                      className={cn(
+                        "px-2.5 py-1 rounded-sm text-xs font-bold transition-all border cursor-pointer",
+                        voiceEmotion === emotion
+                          ? "bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/60"
+                          : "border-transparent text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
+                      )}
+                    >
+                      {emotion}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex items-center gap-1.5 bg-white dark:bg-slate-900 p-1.5 rounded-sm border border-slate-200 dark:border-slate-800 shadow-sm">
+                  <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 px-2 uppercase tracking-wider">Speakers</span>
+                  <button
+                    type="button"
+                    onClick={() => setSpeakerMode?.('single')}
+                    className={cn(
+                      "px-2.5 py-1 rounded-sm text-xs font-bold transition-all border cursor-pointer",
+                      speakerMode !== 'two-speaker'
+                        ? "bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/60"
+                        : "border-transparent text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
+                    )}
+                  >
+                    Single
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSpeakerMode?.('two-speaker')}
+                    className={cn(
+                      "px-2.5 py-1 rounded-sm text-xs font-bold transition-all border cursor-pointer",
+                      speakerMode === 'two-speaker'
+                        ? "bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/60"
+                        : "border-transparent text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
+                    )}
+                  >
+                    Two Speakers
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* When Music is active */}
+            {audioGenerationType === 'music' && (
+              <>
+                <div className="flex items-center gap-1.5 bg-white dark:bg-slate-900 p-1.5 rounded-sm border border-slate-200 dark:border-slate-800 shadow-sm">
+                  <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 px-2 uppercase tracking-wider">Format</span>
+                  <button
+                    type="button"
+                    onClick={() => setMusicMode?.('clip')}
+                    className={cn(
+                      "px-2.5 py-1 rounded-sm text-xs font-bold transition-all border cursor-pointer",
+                      musicMode !== 'full-track'
+                        ? "bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/60"
+                        : "border-transparent text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
+                    )}
+                    title="Lyria 3.5 Clip (30s, 5 credits)"
+                  >
+                    30s Clip (5c)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMusicMode?.('full-track')}
+                    className={cn(
+                      "px-2.5 py-1 rounded-sm text-xs font-bold transition-all border cursor-pointer",
+                      musicMode === 'full-track'
+                        ? "bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/60"
+                        : "border-transparent text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
+                    )}
+                    title="Lyria 3.5 Pro (Full track, 10 credits)"
+                  >
+                    Full Track (10c)
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2 bg-white dark:bg-slate-900 p-1.5 rounded-sm border border-slate-200 dark:border-slate-800 shadow-sm">
+                  <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 px-2 uppercase tracking-wider">Genre</span>
+                  {(['Cinematic', 'Electronic', 'Lofi Beat', 'Acoustic', 'Corporate'] as const).map(genre => (
+                    <button
+                      key={genre}
+                      type="button"
+                      onClick={() => setMusicGenre?.(genre)}
+                      className={cn(
+                        "px-2.5 py-1 rounded-sm text-xs font-bold transition-all border cursor-pointer",
+                        musicGenre === genre
+                          ? "bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/60"
+                          : "border-transparent text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
+                      )}
+                    >
+                      {genre}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -405,6 +711,14 @@ export const CreativeWorkspace: React.FC<CreativeWorkspaceProps> = (props) => {
         setSelectedLanguage={props.setSelectedLanguage}
         selectedVoice={props.selectedVoice}
         setSelectedVoice={props.setSelectedVoice}
+        voiceEmotion={props.voiceEmotion}
+        audioGenerationType={props.audioGenerationType}
+        musicMode={props.musicMode}
+        musicGenre={props.musicGenre}
+        musicMood={props.musicMood}
+        speakerMode={props.speakerMode}
+        speakerTwoVoice={props.speakerTwoVoice}
+        setSpeakerTwoVoice={props.setSpeakerTwoVoice}
         isGeneratingCreativePrompt={props.isGeneratingCreativePrompt}
         setIsGeneratingCreativePrompt={props.setIsGeneratingCreativePrompt}
         prompt={props.prompt}
