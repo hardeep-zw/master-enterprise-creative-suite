@@ -23,6 +23,9 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { submitSalesInquiry } from '@web/infrastructure/repositories/salesRepository.js';
+import { apiClient } from '@web/infrastructure/api/apiClient.js';
+import type { PlanId } from '@shared-types/billing.js';
+import { PaymentStatusModal } from './PaymentStatusModal.js';
 
 interface EnterprisePlanProps {
   credits?: number;
@@ -250,12 +253,16 @@ export const EnterprisePlan: React.FC<EnterprisePlanProps> = ({ credits = 50, se
   const getBadgeClass = (type: string) => {
     if (type === 'rose') return 'bg-rose-500/10 text-rose-600 dark:text-rose-400';
     if (type === 'indigo') return 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400';
-    if (type === 'gold') return 'bg-amber-500/10 text-amber-600 dark:text-amber-400';
+      if (type === 'gold') return 'bg-amber-500/10 text-amber-600 dark:text-amber-400';
     return 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400';
   };
 
   // Launch Razorpay payment flow
+  // Reference to last selected plan for instant retry on failure
+  const lastSelectedPlanRef = React.useRef<typeof pricingModels[0] | null>(null);
+
   const handleActivatePlan = async (plan: typeof pricingModels[0]) => {
+    lastSelectedPlanRef.current = plan;
     if (plan.name === 'Enterprise') {
       setShowSalesForm(true);
       setSalesSubmitMessage(null);
@@ -298,48 +305,48 @@ export const EnterprisePlan: React.FC<EnterprisePlanProps> = ({ credits = 50, se
       return;
     }
 
-    // Parse values
+    // Canonical plan identification
+    const planId = `plan-${plan.name.toLowerCase()}-${billingPeriod === 'monthly' ? 'monthly' : 'yearly'}` as PlanId;
+
     const rateStr = currency === 'INR'
       ? (billingPeriod === 'monthly' ? plan.monthlyPriceInr : plan.annualPriceInr)
       : (billingPeriod === 'monthly' ? plan.monthlyPriceUsd : plan.annualPriceUsd);
 
     const numericRate = parseInt(rateStr.replace(/[^0-9]/g, ''));
     const amountTotal = billingPeriod === 'monthly' ? numericRate : numericRate * 12;
-    const amountInSubunits = Math.round(amountTotal * 100);
 
     const baseCredits = parseInt(plan.credits.replace(/[^0-9]/g, ''));
     const creditsToApply = billingPeriod === 'monthly' ? baseCredits : baseCredits * 12;
 
-    // 1. Ask backend to register order ID securely using secret keys
-    let orderData;
+    // 1. Ask backend to register order ID securely using canonical plan catalog
+    let orderData: { id: string; amount: number; currency: string; planId: string; keyId?: string; isSimulated?: boolean };
     try {
-      const orderResponse = await fetch('/api/payment/razorpay-order', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          amount: amountInSubunits,
-          currency: currency
-        })
+      orderData = await apiClient.post<{
+        id: string;
+        amount: number;
+        currency: string;
+        planId: string;
+        keyId?: string;
+        isSimulated?: boolean;
+      }>('/api/payment/razorpay-order', {
+        planId,
+        currency,
       });
-      if (!orderResponse.ok) {
-        throw new Error(await orderResponse.text());
-      }
-      orderData = await orderResponse.json();
     } catch (err: any) {
-      console.warn("Backend checkout registration failed, utilizing secure sandbox fallback", err);
-      orderData = {
-        id: 'order_fallback_' + Math.random().toString(36).substring(2, 10),
-        isSimulated: true
-      };
+      console.error("Backend checkout registration failed:", err);
+      setIsScriptLoading(false);
+      setPaymentStatus({
+        status: 'failed',
+        message: err.message || 'Failed to initialize checkout order with server. Please try again.'
+      });
+      return;
     }
 
-    const rzpKeyId = ((import.meta as any).env.VITE_RAZORPAY_KEY_ID as string) || '';
+    const rzpKeyId = orderData.keyId || ((import.meta as any).env.VITE_RAZORPAY_KEY_ID as string) || '';
 
     const options: any = {
       key: rzpKeyId,
-      amount: orderData.amount || amountInSubunits,
+      amount: orderData.amount,
       currency: orderData.currency || currency,
       name: "Writopedia",
       description: `${plan.name} Creative Tier Subscription (${billingPeriod})`,
@@ -349,55 +356,49 @@ export const EnterprisePlan: React.FC<EnterprisePlanProps> = ({ credits = 50, se
         setPaymentStatus({ status: 'loading', message: "Authenticating premium subscription setup..." });
         
         try {
-          if (orderData.isSimulated) {
-            setPaymentStatus({
-              status: 'success',
-              paymentId: response.razorpay_payment_id || 'pay_test_' + Math.random().toString(36).substring(7),
-              planName: plan.name,
-              creditsAdded: creditsToApply,
-              amountPaid: amountTotal
-            });
-
-            if (setCredits) {
-              setCredits(prev => prev + creditsToApply);
-            }
-            return;
-          }
-
           // 2. Double-check client success payload securely on server
-          const verifyResponse = await fetch('/api/payment/razorpay-verify', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              razorpay_order_id: response.razorpay_order_id || orderData.id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature
-            })
+          const verifyData = await apiClient.post<{
+            verified: boolean;
+            paymentId: string;
+            creditsGranted: number;
+            newBalance?: number;
+            alreadyFulfilled?: boolean;
+            message?: string;
+          }>('/api/payment/razorpay-verify', {
+            razorpay_order_id: response.razorpay_order_id || orderData.id,
+            razorpay_payment_id: response.razorpay_payment_id,
+            razorpay_signature: response.razorpay_signature,
+            planId
           });
 
-          if (!verifyResponse.ok) {
-            throw new Error("Cryptographic signature match failure");
-          }
+          const granted = verifyData.creditsGranted || creditsToApply;
 
           setPaymentStatus({
             status: 'success',
-            paymentId: response.razorpay_payment_id || 'pay_test_' + Math.random().toString(36).substring(7),
+            paymentId: response.razorpay_payment_id,
             planName: plan.name,
-            creditsAdded: creditsToApply,
+            creditsAdded: granted,
             amountPaid: amountTotal
           });
 
-          // Add credits to live state which automatically syncs to store
-          if (setCredits) {
-            setCredits(prev => prev + creditsToApply);
+          // Refresh live balance from server truth
+          try {
+            const balRes = await apiClient.get<{ balance: number }>('/api/payment/balance');
+            if (balRes && typeof balRes.balance === 'number' && setCredits) {
+              setCredits(balRes.balance);
+            } else if (setCredits) {
+              setCredits(prev => prev + granted);
+            }
+          } catch {
+            if (setCredits) {
+              setCredits(prev => prev + granted);
+            }
           }
         } catch (verifyErr: any) {
           console.error("Subscription signature verification failed:", verifyErr);
           setPaymentStatus({
             status: 'failed',
-            message: 'Razorpay transaction verification failed. The signature could not be verified securely by the backend.'
+            message: verifyErr.message || 'Razorpay transaction verification failed. Signature verification rejected by server.'
           });
         }
       },
@@ -428,6 +429,13 @@ export const EnterprisePlan: React.FC<EnterprisePlanProps> = ({ credits = 50, se
     setIsScriptLoading(false);
     try {
       const rzp = new (window as any).Razorpay(options);
+      rzp.on('payment.failed', function (resp: any) {
+        console.error("Razorpay payment.failed event:", resp?.error);
+        setPaymentStatus({
+          status: 'failed',
+          message: resp?.error?.description || resp?.error?.reason || "Payment was declined or cancelled at the gateway."
+        });
+      });
       rzp.open();
     } catch (err: any) {
       console.error("RazorPay init failed:", err);
@@ -586,98 +594,16 @@ export const EnterprisePlan: React.FC<EnterprisePlanProps> = ({ credits = 50, se
           )}
         </div>
 
-        {/* Global Payment Notification Dialog */}
-        {paymentStatus.status !== 'idle' && (
-          <motion.div 
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="max-w-2xl mx-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl rounded-lg p-6 space-y-6 relative overflow-hidden"
-          >
-            {paymentStatus.status === 'loading' && (
-              <div className="flex flex-col items-center justify-center py-8 space-y-4">
-                <div className="w-12 h-12 border-4 border-rose-600 border-t-transparent rounded-full animate-spin"></div>
-                <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">{paymentStatus.message}</p>
-                <p className="text-xs text-slate-400 dark:text-slate-500">Connecting outer secure channels...</p>
-              </div>
-            )}
-
-            {paymentStatus.status === 'failed' && (
-              <div className="space-y-4">
-                <div className="flex items-start gap-4">
-                  <div className="p-3 bg-red-100 dark:bg-red-950/30 text-red-600 dark:text-red-400 rounded-full">
-                    <HelpCircle size={24} />
-                  </div>
-                  <div className="space-y-1">
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white uppercase tracking-wider">Gateway Initialization Bounds</h3>
-                    <p className="text-xs text-slate-505 dark:text-slate-400 leading-relaxed">{paymentStatus.message}</p>
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-2 pt-2">
-                  <button
-                    onClick={() => setPaymentStatus({ status: 'idle' })}
-                    className="px-4 py-1.5 text-xs font-bold uppercase tracking-wide border dark:border-slate-850 rounded hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-500"
-                  >
-                    Dismiss
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {paymentStatus.status === 'success' && (
-              <div className="space-y-6 relative z-10">
-                <div className="text-center space-y-2 py-4">
-                  <div className="inline-flex p-3 bg-emerald-100 dark:bg-emerald-950/45 text-emerald-600 dark:text-emerald-400 rounded-full mb-2">
-                    <Sparkles className="animate-pulse" size={32} />
-                  </div>
-                  <h3 className="text-2xl font-light text-slate-900 dark:text-white tracking-tight">Payment Successfully Received!</h3>
-                  <p className="text-xs text-slate-505 dark:text-slate-400 uppercase tracking-widest font-mono">ID: {paymentStatus.paymentId}</p>
-                </div>
-
-                <div className="bg-slate-50 dark:bg-slate-950/60 rounded border border-slate-200 dark:border-slate-800 p-6 space-y-4">
-                  <h4 className="text-xs font-bold uppercase tracking-widest text-slate-700 dark:text-slate-300 border-b pb-2">Purchase Receipt & Credits Applied</h4>
-                  <div className="grid grid-cols-2 gap-4 text-xs">
-                    <div>
-                      <span className="text-slate-400">Purchased Plan</span>
-                      <p className="font-bold text-slate-900 dark:text-white mt-0.5">{paymentStatus.planName} Tier</p>
-                    </div>
-                    <div>
-                      <span className="text-slate-400">Cost Authorized</span>
-                      <p className="font-bold text-slate-900 dark:text-white mt-0.5">
-                        {currency === 'INR' ? '₹' : '$'}{paymentStatus.amountPaid?.toLocaleString() || '0'}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="text-slate-400">Total Credits Added</span>
-                      <p className="font-mono text-rose-500 font-bold text-sm mt-0.5">+{paymentStatus.creditsAdded?.toLocaleString()} Credits</p>
-                    </div>
-                    <div>
-                      <span className="text-slate-400">Workspace Status</span>
-                      <p className="font-bold text-emerald-500 mt-0.5">Active & Synchronized</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex justify-between items-center bg-rose-500/10 p-3 rounded border border-rose-500/20 text-xs">
-                  <span className="text-rose-600 dark:text-rose-400 font-medium">Your current total balance has been updated live!</span>
-                  <strong className="font-mono text-rose-650 dark:text-rose-450 text-sm flex items-center gap-1">
-                    <Coins size={14} className="text-rose-500" />
-                    <span>{credits} Credits</span>
-                  </strong>
-                </div>
-
-                <div className="flex justify-end gap-2 pt-2">
-                  <button
-                    onClick={() => setPaymentStatus({ status: 'idle' })}
-                    className="px-6 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 text-xs font-extrabold uppercase tracking-widest rounded transition-all"
-                  >
-                    Access Workspace
-                  </button>
-                </div>
-              </div>
-            )}
-          </motion.div>
-        )}
+        {/* Unified Payment Notification Dialog */}
+        <PaymentStatusModal
+          status={paymentStatus}
+          currency={currency}
+          currentBalance={credits}
+          onDismiss={() => setPaymentStatus({ status: 'idle' })}
+          onRetry={lastSelectedPlanRef.current && lastSelectedPlanRef.current.name !== 'Enterprise' ? () => handleActivatePlan(lastSelectedPlanRef.current!) : undefined}
+          onAction={() => setPaymentStatus({ status: 'idle' })}
+          actionLabel="Access Workspace"
+        />
 
         {/* Pricing Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 relative">

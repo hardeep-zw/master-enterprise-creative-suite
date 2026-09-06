@@ -52,8 +52,15 @@ export function createExpressApp(): Express {
   });
 
 
-  // 2. JSON and URL-encoded payload parsers
-  app.use(express.json({ limit: "50mb" }));
+  // 2. JSON and URL-encoded payload parsers with rawBody capture for cryptographic signature verification
+  app.use(
+    express.json({
+      limit: "50mb",
+      verify: (req: any, _res, buf) => {
+        req.rawBody = buf;
+      },
+    })
+  );
   app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
   // 3. Centralized Authentication Middleware (Default-Deny)
@@ -67,7 +74,15 @@ export function createExpressApp(): Express {
   app.use("/api/video", aiRateLimiter, videoRouter);
   app.use("/api/presentation", aiRateLimiter, presentationRouter);
   app.use("/api/campaign", aiRateLimiter, campaignRouter);
-  app.use("/api/payment", billingRateLimiter, billingRouter);
+  // Webhooks are HMAC-verified server-to-server calls and must not be throttled by client rate limits
+  app.use(
+    "/api/payment",
+    (req, res, next) => {
+      if (req.path === "/webhook") return next();
+      return billingRateLimiter(req, res, next);
+    },
+    billingRouter
+  );
   app.use("/api/contact-sales", salesRateLimiter, salesRouter);
   app.use("/api/brand-guidelines", brandRouter);
   app.use("/api/history", historyRouter);
