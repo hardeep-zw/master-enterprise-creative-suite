@@ -11,10 +11,9 @@ import {
   Mail, 
   Phone, 
   Clock, 
-  FileText,
-  Lock,
-  Compass,
-  Briefcase
+  Lock, 
+  Compass, 
+  Briefcase 
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -55,18 +54,18 @@ export default function LandingPage({ onOpenWorkspace, onLogin, navigateTo }: La
   };
 
   return (
-    <div className="min-h-screen bg-[#fafafc] text-slate-800 font-sans relative overflow-x-hidden selection:bg-crimson/10 selection:text-crimson">
+    <div className="min-h-[100dvh] lg:h-[100dvh] lg:max-h-[100dvh] bg-[#fafafc] text-slate-800 font-sans relative overflow-x-hidden flex flex-col justify-between selection:bg-crimson/10 selection:text-crimson">
       {/* Subtle Dot Matrix Background Accent */}
-      <div className="absolute inset-0 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:16px_16px] opacity-70 pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:16px_16px] opacity-75 pointer-events-none" />
 
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-100 px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
+      {/* 1. Header */}
+      <header className="sticky top-0 z-40 bg-white/85 backdrop-blur-md border-b border-slate-100 px-6 h-14 sm:h-16 shrink-0 flex items-center">
+        <div className="max-w-7xl w-full mx-auto flex items-center justify-between">
           {/* Brand Logo */}
-          <WritopediaLogo className="h-14 sm:h-16" />
+          <WritopediaLogo className="h-8 sm:h-9" />
 
           {/* Nav Center */}
-          <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
+          <nav className="hidden md:flex items-center gap-7 lg:gap-8 text-sm font-medium text-slate-600">
             <button 
               onClick={onOpenWorkspace}
               className="hover:text-crimson transition-colors cursor-pointer"
@@ -96,16 +95,16 @@ export default function LandingPage({ onOpenWorkspace, onLogin, navigateTo }: La
           </nav>
 
           {/* Right Action */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
             <button 
               onClick={onLogin}
-              className="text-sm font-semibold text-slate-600 hover:text-crimson transition-colors px-3 py-1.5 cursor-pointer"
+              className="text-sm font-semibold text-slate-600 hover:text-crimson transition-colors px-2.5 py-1 cursor-pointer"
             >
               Log In
             </button>
             <button 
               onClick={onLogin}
-              className="bg-crimson hover:bg-crimson/90 text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer"
+              className="bg-crimson hover:bg-crimson/90 text-white text-xs sm:text-sm font-semibold px-4 sm:px-5 py-2 rounded-full transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer"
             >
               Sign Up
             </button>
@@ -113,30 +112,31 @@ export default function LandingPage({ onOpenWorkspace, onLogin, navigateTo }: La
         </div>
       </header>
 
-      {/* Hero Section */}
-      <main className="max-w-4xl mx-auto px-6 pt-16 pb-20 text-center relative z-10">
+      {/* 2. Hero & Main Interactive Section */}
+      <main className="max-w-4xl w-full mx-auto px-4 sm:px-6 py-3 lg:py-2 flex-1 flex flex-col justify-center text-center relative z-10">
         <motion.div
-          initial={{ opacity: 0, y: 15 }}
+          initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="space-y-6"
+          transition={{ duration: 0.4 }}
+          className="space-y-1.5 sm:space-y-2"
         >
           {/* Main Title */}
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-slate-900 tracking-tight leading-[1.15]">
+          <h1 className="text-3xl sm:text-4xl lg:text-[44px] font-bold text-slate-900 tracking-tight leading-[1.12]">
             Writopedia AI Platform
           </h1>
 
           {/* Subtitle */}
-          <p className="text-lg sm:text-xl text-slate-600 font-light max-w-2xl mx-auto leading-relaxed">
+          <p className="text-sm sm:text-base text-slate-600 font-light max-w-xl mx-auto leading-snug">
             Create brand-consistent campaigns, presentations, images, videos, and marketing content from a single AI workspace.
           </p>
 
-          <p className="text-sm text-slate-400 font-light max-w-lg mx-auto">
+          {/* Helper Text */}
+          <p className="text-[11px] sm:text-xs text-slate-400 font-light max-w-lg mx-auto">
             Browse the platform, pricing and documentation before creating your workspace.
           </p>
 
-          {/* Badges */}
-          <div className="flex flex-wrap justify-center items-center gap-3 pt-4">
+          {/* Trust Badges */}
+          <div className="flex flex-wrap justify-center items-center gap-2 sm:gap-2.5 pt-1 sm:pt-1.5">
             {[
               "Brand AI Workspace",
               "Secure Payments",
@@ -145,63 +145,64 @@ export default function LandingPage({ onOpenWorkspace, onLogin, navigateTo }: La
             ].map((pill, idx) => (
               <span 
                 key={idx} 
-                className="bg-white border border-slate-200/80 px-4 py-2 rounded-full text-xs font-semibold text-slate-700 flex items-center gap-2 shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
+                className="bg-white border border-slate-200/80 px-3 sm:px-3.5 py-1 rounded-full text-[11px] font-semibold text-slate-700 flex items-center gap-1.5 shadow-[0_1px_2px_rgba(0,0,0,0.02)] h-[28px] shrink-0"
               >
-                <Check size={14} className="text-crimson shrink-0" />
+                <Check size={13} className="text-crimson shrink-0" />
                 {pill}
               </span>
             ))}
           </div>
 
-          <p className="text-xs text-slate-400 font-light max-w-md mx-auto pt-4 leading-relaxed">
+          {/* Proof Line */}
+          <p className="text-[11px] text-slate-400 font-light max-w-md mx-auto pt-1 leading-tight">
             Writopedia AI is an enterprise SaaS platform for AI-powered creative automation, trusted by businesses worldwide.
           </p>
         </motion.div>
 
-        {/* Dashboard Cards Grid */}
-        <div className="mt-12 grid grid-cols-1 md:grid-cols-12 gap-6 max-w-4xl mx-auto text-left">
+        {/* 3. Dashboard Cards Grid */}
+        <div className="mt-4 sm:mt-5 lg:mt-6 grid grid-cols-1 md:grid-cols-12 gap-3.5 sm:gap-4 max-w-4xl w-full mx-auto text-left">
           {/* Open Workspace Action Box (Crimson Gradient) */}
           <motion.div 
             whileHover={{ scale: 1.01, y: -2 }}
-            className="md:col-span-5 bg-gradient-to-br from-crimson to-[#b51034] rounded-2xl p-8 flex flex-col justify-between h-[280px] shadow-lg shadow-crimson/10 hover:shadow-crimson/20 transition-all duration-300 cursor-pointer"
+            className="md:col-span-5 bg-gradient-to-br from-crimson to-[#b51034] rounded-2xl p-5 sm:p-6 flex flex-col justify-between h-[200px] sm:h-[214px] lg:h-[224px] shadow-lg shadow-crimson/15 hover:shadow-crimson/25 transition-all duration-300 cursor-pointer"
             onClick={onOpenWorkspace}
             id="open-workspace-card"
           >
-            <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center">
-              <Rocket className="text-white w-6 h-6 animate-pulse" />
+            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
+              <Rocket className="text-white w-5 h-5 animate-pulse" />
             </div>
 
             <div className="space-y-1">
-              <div className="flex items-center gap-2 text-white font-bold text-2xl tracking-tight">
+              <div className="flex items-center gap-2 text-white font-bold text-xl sm:text-2xl tracking-tight">
                 <span>Open Workspace</span>
-                <ArrowRight size={22} className="group-hover:translate-x-1 transition-transform" />
+                <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
               </div>
-              <p className="text-white/80 font-light text-sm">
+              <p className="text-white/80 font-light text-xs sm:text-sm">
                 Access your AI workspace
               </p>
             </div>
           </motion.div>
 
-          {/* Sub Grid for Secondary Actions */}
-          <div className="md:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Sub Grid for Secondary Actions (2 x 2) */}
+          <div className="md:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
             {/* Plans Card */}
             <motion.div 
               whileHover={{ y: -2 }}
               onClick={() => { if (navigateTo) { navigateTo('/pricing'); } else { setActiveModal('plans'); } }}
-              className="bg-white border border-slate-200/60 rounded-2xl p-6 hover:shadow-sm hover:border-slate-300 transition-all duration-200 cursor-pointer flex flex-col justify-between h-[134px]"
+              className="bg-white border border-slate-200/60 rounded-xl sm:rounded-2xl p-3.5 sm:p-4 hover:shadow-sm hover:border-slate-300 transition-all duration-200 cursor-pointer flex flex-col justify-between h-[96px] sm:h-[102px] lg:h-[106px]"
             >
-              <div className="space-y-1.5">
-                <div className="flex items-center gap-2 text-slate-900 font-bold text-sm uppercase tracking-wide">
-                  <Tag size={16} className="text-slate-500" />
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5 text-slate-900 font-bold text-xs uppercase tracking-wide">
+                  <Tag size={15} className="text-slate-500" />
                   <span>Plans</span>
                 </div>
-                <p className="text-xs text-slate-500 font-light leading-snug">
+                <p className="text-[11px] text-slate-500 font-light leading-tight">
                   Starter from ₹1,950/month
                 </p>
               </div>
               <button 
                 type="button"
-                className="text-[11px] font-bold text-crimson hover:text-crimson/80 transition-colors flex items-center gap-1.5 self-start"
+                className="text-[10px] sm:text-[11px] font-bold text-crimson hover:text-crimson/80 transition-colors flex items-center gap-1 self-start cursor-pointer"
               >
                 Compare Plans →
               </button>
@@ -211,14 +212,14 @@ export default function LandingPage({ onOpenWorkspace, onLogin, navigateTo }: La
             <motion.div 
               whileHover={{ y: -2 }}
               onClick={() => { if (navigateTo) { navigateTo('/legal'); } else { setLegalTab('privacy'); setActiveModal('legal'); } }}
-              className="bg-white border border-slate-200/60 rounded-2xl p-6 hover:shadow-sm hover:border-slate-300 transition-all duration-200 cursor-pointer flex flex-col justify-between h-[134px]"
+              className="bg-white border border-slate-200/60 rounded-xl sm:rounded-2xl p-3.5 sm:p-4 hover:shadow-sm hover:border-slate-300 transition-all duration-200 cursor-pointer flex flex-col justify-between h-[96px] sm:h-[102px] lg:h-[106px]"
             >
-              <div className="space-y-1.5">
-                <div className="flex items-center gap-2 text-slate-900 font-bold text-sm uppercase tracking-wide">
-                  <Shield size={16} className="text-slate-500" />
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5 text-slate-900 font-bold text-xs uppercase tracking-wide">
+                  <Shield size={15} className="text-slate-500" />
                   <span>Legal</span>
                 </div>
-                <p className="text-xs text-slate-500 font-light leading-snug">
+                <p className="text-[11px] text-slate-500 font-light leading-tight">
                   Privacy, Terms, Refund Policy
                 </p>
               </div>
@@ -228,14 +229,14 @@ export default function LandingPage({ onOpenWorkspace, onLogin, navigateTo }: La
             <motion.div 
               whileHover={{ y: -2 }}
               onClick={() => setActiveModal('contact')}
-              className="bg-white border border-slate-200/60 rounded-2xl p-6 hover:shadow-sm hover:border-slate-300 transition-all duration-200 cursor-pointer flex flex-col justify-between h-[134px]"
+              className="bg-white border border-slate-200/60 rounded-xl sm:rounded-2xl p-3.5 sm:p-4 hover:shadow-sm hover:border-slate-300 transition-all duration-200 cursor-pointer flex flex-col justify-between h-[96px] sm:h-[102px] lg:h-[106px]"
             >
-              <div className="space-y-1.5">
-                <div className="flex items-center gap-2 text-slate-900 font-bold text-sm uppercase tracking-wide">
-                  <MessageSquare size={16} className="text-slate-500" />
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5 text-slate-900 font-bold text-xs uppercase tracking-wide">
+                  <MessageSquare size={15} className="text-slate-500" />
                   <span>Contact</span>
                 </div>
-                <p className="text-xs text-slate-500 font-light leading-snug">
+                <p className="text-[11px] text-slate-500 font-light leading-tight">
                   Enterprise support team
                 </p>
               </div>
@@ -245,14 +246,14 @@ export default function LandingPage({ onOpenWorkspace, onLogin, navigateTo }: La
             <motion.div 
               whileHover={{ y: -2 }}
               onClick={() => window.open("https://writopedia.com", "_blank")}
-              className="bg-white border border-slate-200/60 rounded-2xl p-6 hover:shadow-sm hover:border-slate-300 transition-all duration-200 cursor-pointer flex flex-col justify-between h-[134px]"
+              className="bg-white border border-slate-200/60 rounded-xl sm:rounded-2xl p-3.5 sm:p-4 hover:shadow-sm hover:border-slate-300 transition-all duration-200 cursor-pointer flex flex-col justify-between h-[96px] sm:h-[102px] lg:h-[106px]"
             >
-              <div className="space-y-1.5">
-                <div className="flex items-center gap-2 text-slate-900 font-bold text-sm uppercase tracking-wide">
-                  <Info size={16} className="text-slate-500" />
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5 text-slate-900 font-bold text-xs uppercase tracking-wide">
+                  <Info size={15} className="text-slate-500" />
                   <span>About</span>
                 </div>
-                <p className="text-xs text-slate-500 font-light leading-snug">
+                <p className="text-[11px] text-slate-500 font-light leading-tight">
                   Learn about Writopedia, our company, and policies.
                 </p>
               </div>
@@ -261,31 +262,31 @@ export default function LandingPage({ onOpenWorkspace, onLogin, navigateTo }: La
         </div>
       </main>
 
-      {/* Support Sub-footer */}
-      <div className="border-t border-slate-200/50 bg-slate-50/50 py-6 text-center text-[11px] text-slate-500 space-y-2">
-        <div className="max-w-7xl mx-auto px-6 flex flex-wrap justify-center items-center gap-x-6 gap-y-2">
-          <span>Need help choosing a plan?</span>
+      {/* 4. Support Sub-footer */}
+      <div className="shrink-0 border-t border-slate-200/50 bg-slate-50/60 py-2 sm:py-2.5 text-center text-[10px] sm:text-[11px] text-slate-500 space-y-1">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-wrap justify-center items-center gap-x-4 sm:gap-x-6 gap-y-1">
+          <span className="font-medium">Need help choosing a plan?</span>
           <a href="mailto:business@writopedia.com" className="hover:text-crimson transition-colors flex items-center gap-1">
-            <Mail size={12} /> business@writopedia.com
+            <Mail size={12} className="shrink-0" /> business@writopedia.com
           </a>
           <span className="flex items-center gap-1">
-            <Phone size={12} /> +91 84695 11803
+            <Phone size={12} className="shrink-0" /> +91 84695 11803
           </span>
           <span className="flex items-center gap-1">
-            <Clock size={12} /> Monday-Friday • 10:00 AM - 6:00 PM IST
+            <Clock size={12} className="shrink-0" /> Monday-Friday • 10:00 AM - 6:00 PM IST
           </span>
         </div>
-        <p className="max-w-xl mx-auto px-6 leading-relaxed">
+        <p className="max-w-xl mx-auto px-4 text-[10px] text-slate-400 font-light leading-tight">
           Writopedia AI helps businesses generate AI-powered marketing assets, presentations, documents and campaigns while maintaining brand consistency.
         </p>
       </div>
 
-      {/* Primary Footer */}
-      <footer className="border-t border-slate-100 bg-white py-8 text-xs text-slate-400">
-        <div className="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+      {/* 5. Primary Footer */}
+      <footer className="shrink-0 border-t border-slate-100 bg-white py-2 sm:py-2.5 px-4 sm:px-6 text-[10px] sm:text-[11px] text-slate-400 h-10 sm:h-11 flex items-center">
+        <div className="max-w-7xl w-full mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
           <span>© 2026 Writopedia AI</span>
-          <span className="text-slate-500">business@writopedia.com</span>
-          <div className="flex items-center gap-6">
+          <span className="hidden md:inline text-slate-500">business@writopedia.com</span>
+          <div className="flex items-center gap-4 sm:gap-6">
             <button onClick={() => { if (navigateTo) { navigateTo('/legal#privacy'); } else { setLegalTab('privacy'); setActiveModal('legal'); } }} className="hover:text-crimson transition-colors cursor-pointer">Privacy Policy</button>
             <button onClick={() => { if (navigateTo) { navigateTo('/legal#refund'); } else { setLegalTab('refund'); setActiveModal('legal'); } }} className="hover:text-crimson transition-colors cursor-pointer">Refund Policy</button>
             <button onClick={() => { if (navigateTo) { navigateTo('/legal#terms'); } else { setLegalTab('terms'); setActiveModal('legal'); } }} className="hover:text-crimson transition-colors cursor-pointer">Terms of Service</button>
@@ -354,7 +355,7 @@ export default function LandingPage({ onOpenWorkspace, onLogin, navigateTo }: La
                             <li className="flex items-center gap-1.5"><Check size={12} className="text-emerald-500 shrink-0" /> Full HD Imagery</li>
                           </ul>
                         </div>
-                        <button onClick={() => { setActiveModal(null); onLogin(); }} className="w-full bg-slate-900 hover:bg-slate-800 text-white text-[10px] py-2 rounded-lg font-bold tracking-wider uppercase transition-colors">Choose Starter</button>
+                        <button onClick={() => { setActiveModal(null); onLogin(); }} className="w-full bg-slate-900 hover:bg-slate-800 text-white text-[10px] py-2 rounded-lg font-bold tracking-wider uppercase transition-colors cursor-pointer">Choose Starter</button>
                       </div>
 
                       {/* Tier 2 */}
@@ -373,7 +374,7 @@ export default function LandingPage({ onOpenWorkspace, onLogin, navigateTo }: La
                             <li className="flex items-center gap-1.5"><Check size={12} className="text-emerald-500 shrink-0" /> Human Touch Support</li>
                           </ul>
                         </div>
-                        <button onClick={() => { setActiveModal(null); onLogin(); }} className="w-full bg-crimson hover:bg-crimson/95 text-white text-[10px] py-2 rounded-lg font-bold tracking-wider uppercase transition-colors">Go Professional</button>
+                        <button onClick={() => { setActiveModal(null); onLogin(); }} className="w-full bg-crimson hover:bg-crimson/95 text-white text-[10px] py-2 rounded-lg font-bold tracking-wider uppercase transition-colors cursor-pointer">Go Professional</button>
                       </div>
 
                       {/* Tier 3 */}
@@ -391,7 +392,7 @@ export default function LandingPage({ onOpenWorkspace, onLogin, navigateTo }: La
                             <li className="flex items-center gap-1.5"><Check size={12} className="text-emerald-500 shrink-0" /> Fine-tuned brand models</li>
                           </ul>
                         </div>
-                        <button onClick={() => { setActiveModal(null); onLogin(); }} className="w-full bg-slate-150 hover:bg-slate-200 text-slate-700 text-[10px] py-2 rounded-lg font-bold tracking-wider uppercase transition-colors">Talk to Sales</button>
+                        <button onClick={() => { setActiveModal(null); onLogin(); }} className="w-full bg-slate-150 hover:bg-slate-200 text-slate-700 text-[10px] py-2 rounded-lg font-bold tracking-wider uppercase transition-colors cursor-pointer">Talk to Sales</button>
                       </div>
                     </div>
                   </div>
