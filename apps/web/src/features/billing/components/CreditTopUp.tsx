@@ -189,13 +189,15 @@ export const CreditTopUp: React.FC<CreditTopUpProps> = ({ credits = 50, setCredi
   const handlePurchaseTopUp = async (plan: typeof topUpModels[0]) => {
     lastSelectedTopUpRef.current = plan;
     if (!user) {
-      localStorage.setItem('pending_pricing_plan', JSON.stringify({
-        name: plan.name,
-        type: 'topup',
-        credits: plan.credits,
-        currency,
-        source: 'credit_topup'
-      }));
+      try {
+        localStorage.setItem('pending_pricing_plan', JSON.stringify({
+          name: plan.name,
+          type: 'topup',
+          credits: plan.credits,
+          currency,
+          source: 'credit_topup'
+        }));
+      } catch {}
       if (onLogin) {
         onLogin();
       } else {

@@ -277,12 +277,14 @@ export const EnterprisePlan: React.FC<EnterprisePlanProps> = ({ credits = 50, se
     }
 
     if (!user) {
-      localStorage.setItem('pending_pricing_plan', JSON.stringify({
-        name: plan.name,
-        billingPeriod,
-        currency,
-        source: 'enterprise_plan'
-      }));
+      try {
+        localStorage.setItem('pending_pricing_plan', JSON.stringify({
+          name: plan.name,
+          billingPeriod,
+          currency,
+          source: 'enterprise_plan'
+        }));
+      } catch {}
       if (onLogin) {
         onLogin();
       } else {

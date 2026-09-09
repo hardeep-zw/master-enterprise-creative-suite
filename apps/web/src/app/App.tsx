@@ -30,6 +30,7 @@ import { AppRouter } from './AppRouter.js';
 import { AppShell } from './AppShell.js';
 import { type HistoryItem } from '../features/layout/components/AppSidebar.js';
 import { CreditGateProvider } from '../features/billing/context/CreditGateContext.js';
+import { safeGetItem, safeSetItem, sanitizeHistory } from '../lib/storage.js';
 
 export function App() {
   const { user, loading, logout, login, loginWithEmail, registerWithEmail } = useAuth();
@@ -39,13 +40,11 @@ export function App() {
 
   // Core App State
   const [brandSetupComplete, setBrandSetupComplete] = useState<boolean>(() => {
-    const saved = localStorage.getItem('brandSetupComplete');
-    return saved ? JSON.parse(saved) : false;
+    return safeGetItem<boolean>('brandSetupComplete', false);
   });
 
   const [brandGuidelines, setBrandGuidelines] = useState<BrandGuidelines>(() => {
-    const saved = localStorage.getItem('brandGuidelines');
-    return saved ? JSON.parse(saved) : {
+    return safeGetItem<BrandGuidelines>('brandGuidelines', {
       name: 'Studio AI',
       industry: 'Creative Technology',
       tone: 'Professional & Innovative',
@@ -56,53 +55,45 @@ export function App() {
       location: 'India',
       voiceAccentStyle: 'Indian English',
       visualEthnicityStyle: 'Indian'
-    };
+    });
   });
 
   const [editingGuidelines, setEditingGuidelines] = useState<BrandGuidelines>(brandGuidelines);
   const [showGuidelines, setShowGuidelines] = useState(false);
   const [showAssetLibrary, setShowAssetLibrary] = useState(false);
   const [credits, setCredits] = useState<number>(() => {
-    const saved = localStorage.getItem('studio_credits');
-    return saved ? parseInt(saved) : 50;
+    const saved = safeGetItem<string | number>('studio_credits', 50);
+    return typeof saved === 'number' ? saved : (parseInt(saved) || 50);
   });
 
   const [selectedGem, setSelectedGem] = useState<Gem>(() => {
-    try {
-      const savedGemId = localStorage.getItem('active_selected_gem_id');
-      if (savedGemId) {
-        const found = GENERIC_GEMS.find(g => g.id === savedGemId);
-        if (found) return found;
-      }
-    } catch {}
+    const savedGemId = safeGetItem<string>('active_selected_gem_id', '');
+    if (savedGemId) {
+      const found = GENERIC_GEMS.find(g => g.id === savedGemId);
+      if (found) return found;
+    }
     return GENERIC_GEMS[0];
   });
 
   const [view, setView] = useState<'tools' | 'assets' | 'plan' | 'admin' | 'curation' | 'topup'>(() => {
-    try {
-      const savedView = localStorage.getItem('active_workspace_view');
-      const validViews = ['tools', 'assets', 'plan', 'admin', 'curation', 'topup'];
-      if (savedView && validViews.includes(savedView)) {
-        return savedView as any;
-      }
-    } catch {}
+    const savedView = safeGetItem<string>('active_workspace_view', 'tools');
+    const validViews = ['tools', 'assets', 'plan', 'admin', 'curation', 'topup'];
+    if (validViews.includes(savedView)) {
+      return savedView as any;
+    }
     return 'tools';
   });
 
   // Persist view and selected tool across page refreshes
   useEffect(() => {
     if (view) {
-      try {
-        localStorage.setItem('active_workspace_view', view);
-      } catch {}
+      safeSetItem('active_workspace_view', view);
     }
   }, [view]);
 
   useEffect(() => {
     if (selectedGem?.id) {
-      try {
-        localStorage.setItem('active_selected_gem_id', selectedGem.id);
-      } catch {}
+      safeSetItem('active_selected_gem_id', selectedGem.id);
     }
   }, [selectedGem?.id]);
 
@@ -118,8 +109,8 @@ export function App() {
   // Asset & History Persistence
   const [assets, setAssets] = useState<any[]>([]);
   const [history, setHistory] = useState<HistoryItem[]>(() => {
-    const saved = localStorage.getItem('creative_history');
-    return saved ? JSON.parse(saved) : [];
+    const saved = safeGetItem<HistoryItem[]>('creative_history', []);
+    return Array.isArray(saved) ? sanitizeHistory(saved, 20) : [];
   });
 
   // Curation & Human Touch State
@@ -207,50 +198,12 @@ export function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  // Safe LocalStorage setter with QuotaExceededError protection and automatic pruning
-  const safeSetLocalStorage = (key: string, value: string) => {
-    try {
-      localStorage.setItem(key, value);
-    } catch (err) {
-      console.warn(`[LocalStorage] Quota exceeded or storage error on "${key}":`, err);
-      if (key === 'creative_history') {
-        try {
-          const parsed = JSON.parse(value);
-          if (Array.isArray(parsed)) {
-            // Prune to 10 latest items and strip large base64 data URLs to reclaim quota
-            const pruned = parsed.slice(0, 10).map((item: any) => {
-              if (item?.result && typeof item.result === 'object') {
-                const resCopy = { ...item.result };
-                if (typeof resCopy.imageUrl === 'string' && resCopy.imageUrl.startsWith('data:')) {
-                  resCopy.imageUrl = '';
-                }
-                if (typeof resCopy.videoUrl === 'string' && resCopy.videoUrl.startsWith('data:')) {
-                  resCopy.videoUrl = '';
-                }
-                if (typeof resCopy.dataUrl === 'string' && resCopy.dataUrl.startsWith('data:')) {
-                  resCopy.dataUrl = '';
-                }
-                return { ...item, result: resCopy };
-              }
-              return item;
-            });
-            localStorage.setItem(key, JSON.stringify(pruned));
-          }
-        } catch {
-          try {
-            localStorage.removeItem('creative_history');
-          } catch {}
-        }
-      }
-    }
-  };
-
-  // Sync Preferences to LocalStorage safely
+  // Sync Preferences to LocalStorage safely with quota protection
   useEffect(() => {
-    safeSetLocalStorage('brandSetupComplete', JSON.stringify(brandSetupComplete));
-    safeSetLocalStorage('brandGuidelines', JSON.stringify(brandGuidelines));
-    safeSetLocalStorage('studio_credits', credits.toString());
-    safeSetLocalStorage('creative_history', JSON.stringify(history));
+    safeSetItem('brandSetupComplete', brandSetupComplete);
+    safeSetItem('brandGuidelines', brandGuidelines);
+    safeSetItem('studio_credits', credits.toString());
+    safeSetItem('creative_history', history);
   }, [brandSetupComplete, brandGuidelines, credits, history]);
 
   // Real-time Subscriptions to Cloud Repositories when User is Authenticated

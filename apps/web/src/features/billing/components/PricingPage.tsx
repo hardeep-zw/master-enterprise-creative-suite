@@ -455,11 +455,13 @@ export default function PricingPage({
       if (user) {
         handleCheckout(planName, billingPeriod, currency);
       } else {
-        localStorage.setItem('pending_pricing_plan', JSON.stringify({
-          name: planName,
-          billingPeriod,
-          currency
-        }));
+        try {
+          localStorage.setItem('pending_pricing_plan', JSON.stringify({
+            name: planName,
+            billingPeriod,
+            currency
+          }));
+        } catch {}
         onLogin();
       }
     }

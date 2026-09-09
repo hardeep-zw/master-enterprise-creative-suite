@@ -196,7 +196,13 @@ export function CampaignDeckWorkspace({
 
   // Track key saves locally
   useEffect(() => {
-    localStorage.setItem('FAL_API_KEY', customFalKey);
+    try {
+      if (customFalKey) {
+        localStorage.setItem('FAL_API_KEY', customFalKey);
+      } else {
+        localStorage.removeItem('FAL_API_KEY');
+      }
+    } catch {}
   }, [customFalKey]);
 
   // Handle incoming active campaign loads from past history

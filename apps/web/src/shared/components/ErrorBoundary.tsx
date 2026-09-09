@@ -25,6 +25,25 @@ export class ErrorBoundary extends Component<Props, State> {
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('[ErrorBoundary] Uncaught application error:', error, errorInfo);
     this.setState({ errorInfo });
+
+    // Auto-heal storage quota errors immediately
+    const isQuota = 
+      error?.name === 'QuotaExceededError' ||
+      error?.message?.toLowerCase().includes('quota') ||
+      error?.message?.toLowerCase().includes('storage');
+
+    if (isQuota) {
+      console.warn('[ErrorBoundary] Storage quota exceeded. Proactively pruning local storage...');
+      try {
+        localStorage.removeItem('creative_history');
+        localStorage.removeItem('staged_text_brief');
+        localStorage.removeItem('staged_image_brief');
+        localStorage.removeItem('staged_video_brief');
+        localStorage.removeItem('staged_audio_brief');
+        localStorage.removeItem('staged_deck_brief');
+        localStorage.removeItem('staged_full_strategy');
+      } catch {}
+    }
   }
 
   private handleReload = () => {
@@ -46,6 +65,10 @@ export class ErrorBoundary extends Component<Props, State> {
 
   public render() {
     if (this.state.hasError) {
+      const isQuota =
+        this.state.error?.name === 'QuotaExceededError' ||
+        this.state.error?.message?.toLowerCase().includes('quota');
+
       return (
         <div className="min-h-screen w-screen flex flex-col items-center justify-center bg-slate-950 text-white p-6 select-none font-sans">
           <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-2xl space-y-5 text-left">
@@ -54,8 +77,14 @@ export class ErrorBoundary extends Component<Props, State> {
                 <AlertTriangle size={24} />
               </div>
               <div>
-                <h1 className="text-base font-bold text-white">Something went wrong</h1>
-                <p className="text-xs text-slate-400">The workspace encountered an unexpected runtime error.</p>
+                <h1 className="text-base font-bold text-white">
+                  {isQuota ? 'Storage Quota Exceeded' : 'Something went wrong'}
+                </h1>
+                <p className="text-xs text-slate-400">
+                  {isQuota
+                    ? 'Local browser storage reached its limit. Storage cache has been cleaned.'
+                    : 'The workspace encountered an unexpected runtime error.'}
+                </p>
               </div>
             </div>
 
