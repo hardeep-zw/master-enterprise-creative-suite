@@ -10,14 +10,14 @@ import { serverConfig } from "../../config/env.js";
 let adminClient: SupabaseClient | null = null;
 
 /**
- * Returns a privileged Supabase Admin client utilizing SUPABASE_SERVICE_ROLE_KEY.
+ * Returns a privileged Supabase Admin client utilizing SUPABASE_SECRET_KEY.
  * Used exclusively for server-authoritative mutations (ledger, holds, payments).
  */
 export function getSupabaseAdmin(): SupabaseClient | null {
   if (adminClient) return adminClient;
 
   const url = serverConfig.supabaseUrl;
-  const key = serverConfig.supabaseServiceRoleKey || serverConfig.supabaseAnonKey;
+  const key = serverConfig.supabaseSecretKey || serverConfig.supabaseServiceRoleKey || serverConfig.supabasePublishableKey || serverConfig.supabaseAnonKey;
 
   if (!url || !key) {
     return null;
@@ -42,7 +42,7 @@ export function getSupabaseAdmin(): SupabaseClient | null {
  */
 export function getSupabaseUserClient(accessToken: string): SupabaseClient | null {
   const url = serverConfig.supabaseUrl;
-  const key = serverConfig.supabaseAnonKey;
+  const key = serverConfig.supabasePublishableKey || serverConfig.supabaseAnonKey;
 
   if (!url || !key) {
     return null;

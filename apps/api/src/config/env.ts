@@ -24,7 +24,12 @@ export interface ServerConfig {
   razorpayMode: "test" | "live";
   enablePaymentSimulation: boolean;
   supabaseUrl: string;
+  supabasePublishableKey: string;
+  supabaseSecretKey: string;
+  supabaseJwksUrl: string;
+  /** @deprecated Use supabasePublishableKey */
   supabaseAnonKey: string;
+  /** @deprecated Use supabaseSecretKey */
   supabaseServiceRoleKey: string;
   databaseUrl: string;
   databaseConnectionMode: "persistent" | "serverless";
@@ -55,8 +60,11 @@ export const serverConfig: ServerConfig = {
   razorpayMode: (process.env.RAZORPAY_MODE === "live" ? "live" : "test") as "test" | "live",
   enablePaymentSimulation: process.env.ENABLE_PAYMENT_SIMULATION === "true",
   supabaseUrl: process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "",
-  supabaseAnonKey: process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || "",
-  supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || "",
+  supabasePublishableKey: process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || "",
+  supabaseSecretKey: process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "",
+  supabaseJwksUrl: process.env.SUPABASE_JWKS_URL || "",
+  supabaseAnonKey: process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || "",
+  supabaseServiceRoleKey: process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "",
   databaseUrl: process.env.DATABASE_URL || "",
   databaseConnectionMode: (process.env.DB_CONNECTION_MODE === "serverless" ? "serverless" : "persistent"),
   dbDriver: "supabase",
