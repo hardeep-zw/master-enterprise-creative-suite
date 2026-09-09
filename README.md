@@ -88,7 +88,7 @@ Writopedia Platform
 
 | Trust Boundary | Enforcement Mechanism |
 | :--- | :--- |
-| **Zero Browser Secrets** | `GEMINI_API_KEY`, `RAZORPAY_KEY_SECRET`, `FAL_API_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` are strictly server-side and excluded from client bundles. |
+| **Zero Browser Secrets** | `GEMINI_API_KEY`, `RAZORPAY_KEY_SECRET`, `FAL_API_KEY`, and `SUPABASE_SECRET_KEY` (or legacy `SUPABASE_SERVICE_ROLE_KEY`) are strictly server-side and excluded from client bundles. |
 | **Server Billing Authority** | Order amounts and credits are strictly validated against `PLAN_PRICING_CATALOG`; client cannot specify arbitrary amounts or currencies. |
 | **Payment Idempotency** | Cryptographic HMAC-SHA256 signature verification (`verifyRazorpaySignature`) and atomic transaction ledger (`payment_transactions`) prevent double-credits and replay attacks. |
 | **Server-to-Server Webhook Security** | Razorpay webhooks (`POST /api/payment/webhook`) validate timing-safe cryptographic signatures (`crypto.timingSafeEqual`) on the raw unparsed request buffer. |
@@ -152,14 +152,17 @@ RAZORPAY_WEBHOOK_SECRET=your_webhook_secret...
 ENABLE_PAYMENT_SIMULATION=false
 
 # =========================================================
-# Supabase Database & Auth (Free Tier)
+# Supabase Database & Auth (Modern API Key Architecture)
 # =========================================================
-VITE_SUPABASE_URL=https://<project-ref>.supabase.co
 SUPABASE_URL=https://<project-ref>.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJ...
-SUPABASE_ANON_KEY=eyJ...
-SUPABASE_SERVICE_ROLE_KEY=eyJ...
+SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
+SUPABASE_SECRET_KEY=sb_secret_...
 DATABASE_URL=postgresql://postgres:<password>@db.<project-ref>.supabase.co:5432/postgres
+SUPABASE_JWKS_URL=https://<project-ref>.supabase.co/auth/v1/.well-known/jwks.json
+
+# Client-Side Mirrors for Vite SPA
+VITE_SUPABASE_URL=https://<project-ref>.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
 
 # =========================================================
 # Optional: ngrok Tunneling Token

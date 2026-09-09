@@ -100,7 +100,7 @@ Enterprise capability-driven multimodal video generation, conversational editing
 - Backend resolves `assetId` via `VideoAssetResolver` into Supabase signed URLs or buffers for provider payloads. Eliminates megabyte base64 strings over the wire.
 
 ### 8. Live Verification Gate
-- Validates configured credentials (`GEMINI_API_KEY`, `FAL_KEY`, `SUPABASE_SERVICE_ROLE_KEY`) before declaring model readiness.
+- Validates configured credentials (`GEMINI_API_KEY`, `FAL_KEY`, `SUPABASE_SECRET_KEY` / `SUPABASE_SERVICE_ROLE_KEY`) before declaring model readiness.
 
 ---
 

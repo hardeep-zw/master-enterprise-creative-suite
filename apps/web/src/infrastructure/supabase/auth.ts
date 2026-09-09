@@ -8,7 +8,7 @@ import { getSupabaseClient } from "./supabaseClient.js";
 export async function signInWithGoogle(): Promise<{ error?: string }> {
   const supabase = getSupabaseClient();
   if (!supabase) {
-    return { error: "Supabase client is not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY." };
+    return { error: "Supabase client is not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY." };
   }
 
   const { error } = await supabase.auth.signInWithOAuth({
