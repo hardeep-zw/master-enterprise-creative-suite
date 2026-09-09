@@ -31,6 +31,7 @@ import { GENERIC_GEMS } from '@web/infrastructure/ai/modelRegistry.js';
 import type { Gem } from '@shared-types/creative.js';
 import type { BrandGuidelines } from '@shared-types/brand.js';
 import { cn } from '@web/lib/utils.js';
+import { HistorySection } from './history/HistorySection.js';
 
 export interface HistoryItem {
   id: string;
@@ -377,56 +378,17 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
           )}
         </div>
 
-        <div className="pt-8">
-          <div className={cn("flex items-center justify-between mb-4 px-2", !sidebarOpen && "hidden")}>
-            <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-              Recent History
-            </div>
-            {sidebarOpen && history.length > 0 && (
-              <button 
-                onClick={onClearHistory}
-                className="text-[10px] font-bold text-slate-400 hover:text-red-500 uppercase tracking-widest transition-colors flex items-center gap-1 cursor-pointer"
-                title="Clear All History"
-              >
-                Clear
-              </button>
-            )}
-          </div>
-          
-          {history.length === 0 && sidebarOpen && (
-            <div className="px-2 py-4 text-center">
-              <p className="text-[10px] text-slate-400 dark:text-slate-600 italic">No recent history</p>
-            </div>
-          )}
-
-          {history.map((item) => (
-            <div
-              key={item.id}
-              className="group relative"
-            >
-              <button
-                onClick={() => onSelectHistoryItem(item)}
-                className={cn(
-                  "w-full flex items-center gap-3 p-2 rounded-sm text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-left cursor-pointer",
-                  !sidebarOpen && "justify-center"
-                )}
-              >
-                <History size={16} className="shrink-0" />
-                {sidebarOpen && <span className="text-xs truncate pr-6">{item.title || item.prompt}</span>}
-              </button>
-              
-              {sidebarOpen && (
-                <button
-                  onClick={(e) => onDeleteHistoryItem(e, item.id)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-300 dark:text-slate-600 hover:text-red-500 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
-                  title="Delete entry"
-                >
-                  <Trash2 size={12} />
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
+        <HistorySection
+          history={history}
+          onSelectHistoryItem={onSelectHistoryItem}
+          onDeleteHistoryItem={onDeleteHistoryItem}
+          onClearHistory={onClearHistory}
+          credits={credits}
+          user={user}
+          onLogin={onLogin}
+          sidebarOpen={sidebarOpen}
+          onExpandSidebar={() => setSidebarOpen(true)}
+        />
       </nav>
 
       <div className="p-4 border-t border-slate-100 dark:border-slate-800 space-y-1">
