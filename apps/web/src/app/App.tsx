@@ -31,11 +31,12 @@ import { AppShell } from './AppShell.js';
 import { type HistoryItem } from '../features/layout/components/AppSidebar.js';
 import { CreditGateProvider } from '../features/billing/context/CreditGateContext.js';
 import { safeGetItem, safeSetItem, sanitizeHistory } from '../lib/storage.js';
+import { normalizePath } from '../lib/navigation.js';
 
 export function App() {
   const { user, loading, logout, login, loginWithEmail, registerWithEmail } = useAuth();
   
-  const [currentPath, setCurrentPath] = useState(window.location.pathname);
+  const [currentPath, setCurrentPath] = useState(() => normalizePath(window.location.pathname).pathname);
   const [authError, setAuthError] = useState<string | null>(null);
 
   // Core App State
@@ -184,15 +185,33 @@ export function App() {
     }
   }, [isDarkMode]);
 
-  // Handle URL Routing Changes
-  const navigateTo = (path: string) => {
-    window.history.pushState({}, '', path);
-    setCurrentPath(path);
+  // Handle URL Routing Changes with canonical normalization and replace option
+  const navigateTo = (path: string, options?: { replace?: boolean }) => {
+    if (options?.replace) {
+      window.history.replaceState({}, '', path);
+    } else {
+      window.history.pushState({}, '', path);
+    }
+    const { pathname, hash } = normalizePath(path);
+    setCurrentPath(pathname);
+
+    if (hash) {
+      // Trigger hashchange event for components listening to anchor navigation
+      setTimeout(() => {
+        window.dispatchEvent(new HashChangeEvent('hashchange'));
+      }, 0);
+    }
   };
 
   useEffect(() => {
     const handlePopState = () => {
-      setCurrentPath(window.location.pathname);
+      const { pathname, hash } = normalizePath(window.location.pathname + window.location.search + window.location.hash);
+      setCurrentPath(pathname);
+      if (hash) {
+        setTimeout(() => {
+          window.dispatchEvent(new HashChangeEvent('hashchange'));
+        }, 0);
+      }
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);

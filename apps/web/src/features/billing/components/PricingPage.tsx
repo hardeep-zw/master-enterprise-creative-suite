@@ -515,7 +515,7 @@ export default function PricingPage({
           <div className="flex items-center gap-4">
             {user ? (
               <button 
-                onClick={() => navigateTo('/workspace')}
+                onClick={onOpenWorkspace}
                 className="bg-crimson hover:bg-crimson/90 text-white text-sm font-semibold px-6 py-2.5 rounded-full transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer"
               >
                 Go to Workspace

@@ -19,9 +19,18 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 
 // Custom, highly accurate logo component displaying the uploaded brand asset from the public folder
-export function WritopediaLogo({ className = "h-9 sm:h-10" }: { className?: string }) {
+export function WritopediaLogo({ className = "h-9 sm:h-10", onClick }: { className?: string; onClick?: () => void }) {
+  const handleClick = () => {
+    if (onClick) {
+      onClick();
+    } else if (window.location.pathname !== '/') {
+      window.history.pushState({}, '', '/');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    }
+  };
+
   return (
-    <div className={`flex items-center gap-2 cursor-pointer select-none ${className}`} onClick={() => window.location.reload()}>
+    <div className={`flex items-center gap-2 cursor-pointer select-none ${className}`} onClick={handleClick}>
       <img 
         src="/logo.png" 
         alt="Writopedia Logo" 
@@ -64,7 +73,7 @@ export default function LandingPage({ onOpenWorkspace, onLogin, navigateTo }: La
       <header className="sticky top-0 z-40 bg-white/85 backdrop-blur-md border-b border-slate-150/80 px-4 sm:px-6 lg:px-8 h-[64px] sm:h-[70px] lg:h-[76px] shrink-0 flex items-center">
         <div className="max-w-6xl w-full mx-auto flex items-center justify-between gap-2">
           {/* Brand Logo */}
-          <WritopediaLogo className="h-8 sm:h-9 lg:h-10 shrink-0" />
+          <WritopediaLogo className="h-8 sm:h-9 lg:h-10 shrink-0" onClick={() => navigateTo ? navigateTo('/') : undefined} />
 
           {/* Nav Center (Desktop / Tablet Landscape) */}
           <nav className="hidden md:flex items-center gap-6 lg:gap-8 text-[14px] font-medium text-slate-600">

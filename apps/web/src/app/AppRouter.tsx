@@ -5,10 +5,11 @@ import LandingPage from '@web/features/marketing/components/LandingPage.js';
 import { GenerationLoader } from '@web/shared/components/GenerationLoader.js';
 import { BrandSetup } from '../features/brand-guidelines/components/BrandSetup.js';
 import type { BrandGuidelines } from '@shared-types/brand.js';
+import { getAppDestination, isPublicRoute, normalizePath } from '@web/lib/navigation.js';
 
 export interface AppRouterProps {
   currentPath: string;
-  navigateTo: (path: string) => void;
+  navigateTo: (path: string, options?: { replace?: boolean }) => void;
   user: any;
   loading: boolean;
   isInitialDataLoading: boolean;
@@ -43,68 +44,69 @@ export const AppRouter: React.FC<AppRouterProps> = ({
   handleBrandSetupComplete,
   children
 }) => {
-  // Centralized Authentication and Onboarding Routing Authority
+  // Canonical Destination Handler for all "Enter the Product" actions
+  const handleEnterProduct = () => {
+    const destination = getAppDestination(user, brandSetupComplete);
+    navigateTo(destination);
+  };
+
+  // Centralized Authentication and Onboarding Routing Guard Authority
   useEffect(() => {
-    // 1. While auth state or initial cloud data is resolving, do not redirect
+    // 1. While auth state or initial cloud data is resolving, NEVER redirect prematurely
     if (loading || (user && isInitialDataLoading)) {
       return;
     }
 
-    // 2. Unauthenticated user
-    if (!user) {
-      const isPublicRoute = 
-        currentPath === '/' || 
-        currentPath === '/login' || 
-        currentPath === '/pricing' || 
-        currentPath.startsWith('/legal');
+    const { pathname } = normalizePath(currentPath);
 
-      if (!isPublicRoute) {
-        navigateTo('/login');
+    // 2. Unauthenticated User Guard
+    if (!user) {
+      if (!isPublicRoute(pathname)) {
+        // Attempting to access protected route -> replaceState to /login (no history loop)
+        navigateTo('/login', { replace: true });
       }
       return;
     }
 
-    // 3. Authenticated user
+    // 3. Authenticated User Guard
     if (user) {
-      if (currentPath === '/login' || currentPath === '/') {
-        if (brandSetupComplete) {
-          navigateTo('/workspace');
-        } else {
-          navigateTo('/brand-init');
-        }
-      } else if (currentPath === '/brand-init' && brandSetupComplete) {
-        navigateTo('/workspace');
-      } else if (currentPath === '/workspace' && !brandSetupComplete && !isInitialDataLoading) {
-        // Only redirect if brand setup is genuinely absent from both state and storage
+      // Public pages /pricing and /legal remain fully accessible to authenticated users!
+      if (pathname === '/pricing' || pathname.startsWith('/legal')) {
+        return;
+      }
+
+      const destination = getAppDestination(user, brandSetupComplete);
+
+      // A. Visiting landing page ("/") or login ("/login") when authenticated -> Forward into product
+      if (pathname === '/' || pathname === '/login') {
+        navigateTo(destination, { replace: true });
+        return;
+      }
+
+      // B. Visiting /brand-init when brand setup is ALREADY complete -> Forward to /workspace
+      if (pathname === '/brand-init' && brandSetupComplete) {
+        navigateTo('/workspace', { replace: true });
+        return;
+      }
+
+      // C. Visiting /workspace when brand setup is NOT complete -> Forward to /brand-init
+      if (pathname === '/workspace' && !brandSetupComplete && !isInitialDataLoading) {
         const cached = localStorage.getItem('brandSetupComplete');
         if (cached !== 'true') {
-          navigateTo('/brand-init');
+          navigateTo('/brand-init', { replace: true });
+          return;
         }
       }
     }
   }, [user?.uid, loading, isInitialDataLoading, brandSetupComplete, currentPath, navigateTo]);
 
-  if (currentPath.startsWith('/legal')) {
+  const { pathname } = normalizePath(currentPath);
+
+  if (pathname.startsWith('/legal')) {
     return (
       <LegalPage 
-        onOpenWorkspace={() => {
-          if (!user) {
-            navigateTo('/login');
-          } else if (!brandSetupComplete) {
-            navigateTo('/brand-init');
-          } else {
-            navigateTo('/workspace');
-          }
-        }}
-        onLogin={() => {
-          if (!user) {
-            navigateTo('/login');
-          } else if (!brandSetupComplete) {
-            navigateTo('/brand-init');
-          } else {
-            navigateTo('/workspace');
-          }
-        }}
+        onOpenWorkspace={handleEnterProduct}
+        onLogin={handleEnterProduct}
         navigateTo={navigateTo}
         user={user}
         brandSetupComplete={brandSetupComplete}
@@ -112,27 +114,11 @@ export const AppRouter: React.FC<AppRouterProps> = ({
     );
   }
 
-  if (currentPath === '/pricing') {
+  if (pathname === '/pricing') {
     return (
       <PricingPage 
-        onOpenWorkspace={() => {
-          if (!user) {
-            navigateTo('/login');
-          } else if (!brandSetupComplete) {
-            navigateTo('/brand-init');
-          } else {
-            navigateTo('/workspace');
-          }
-        }}
-        onLogin={() => {
-          if (!user) {
-            navigateTo('/login');
-          } else if (!brandSetupComplete) {
-            navigateTo('/brand-init');
-          } else {
-            navigateTo('/workspace');
-          }
-        }}
+        onOpenWorkspace={handleEnterProduct}
+        onLogin={handleEnterProduct}
         navigateTo={navigateTo}
         user={user}
         brandSetupComplete={brandSetupComplete}
@@ -142,28 +128,12 @@ export const AppRouter: React.FC<AppRouterProps> = ({
     );
   }
 
-  if (currentPath === '/') {
+  if (pathname === '/') {
     return (
       <LandingPage 
         navigateTo={navigateTo}
-        onOpenWorkspace={() => {
-          if (!user) {
-            navigateTo('/login');
-          } else if (!brandSetupComplete) {
-            navigateTo('/brand-init');
-          } else {
-            navigateTo('/workspace');
-          }
-        }}
-        onLogin={() => {
-          if (!user) {
-            navigateTo('/login');
-          } else if (!brandSetupComplete) {
-            navigateTo('/brand-init');
-          } else {
-            navigateTo('/workspace');
-          }
-        }}
+        onOpenWorkspace={handleEnterProduct}
+        onLogin={handleEnterProduct}
       />
     );
   }
@@ -177,7 +147,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({
     );
   }
 
-  if (currentPath === '/login' || currentPath === '/brand-init' || !brandSetupComplete) {
+  if (pathname === '/login' || pathname === '/brand-init' || !brandSetupComplete) {
     return (
       <BrandSetup 
         user={user}
@@ -188,13 +158,12 @@ export const AppRouter: React.FC<AppRouterProps> = ({
         logout={handleLogout}
         authError={authError}
         setAuthError={setAuthError}
-        currentPath={user && !brandSetupComplete ? '/brand-init' : currentPath}
+        currentPath={user && !brandSetupComplete ? '/brand-init' : pathname}
         navigateTo={navigateTo}
         onComplete={handleBrandSetupComplete} 
       />
     );
   }
-
 
   return <>{children}</>;
 };
