@@ -137,12 +137,12 @@ export default function LandingPage({ onOpenWorkspace, onLogin, navigateTo, user
 
       {/* 1. Header (Balanced Desktop Scale: 72–76px, Responsive Mobile Bar: 64–70px) */}
       <header className="sticky top-0 z-40 bg-white/85 backdrop-blur-md border-b border-slate-150/80 px-4 sm:px-6 lg:px-8 h-[64px] sm:h-[70px] lg:h-[76px] shrink-0 flex items-center">
-        <div className="max-w-6xl w-full mx-auto flex items-center justify-between gap-2">
+        <div className="max-w-6xl w-full mx-auto flex items-center justify-between gap-2 relative">
           {/* Brand Logo */}
           <WritopediaLogo className="h-8 sm:h-9 lg:h-10 shrink-0" onClick={() => navigateTo ? navigateTo('/') : undefined} />
 
-          {/* Nav Center (Desktop / Tablet Landscape) */}
-          <nav className="hidden md:flex items-center gap-6 lg:gap-8 text-[14px] font-medium text-slate-600">
+          {/* Nav Center (Desktop / Tablet Landscape) - Truly Centered */}
+          <nav className="hidden md:flex items-center gap-6 lg:gap-8 text-[14px] font-medium text-slate-600 md:absolute md:left-1/2 md:-translate-x-1/2 pointer-events-auto z-10">
             <button 
               onClick={onOpenWorkspace}
               className="hover:text-crimson transition-colors cursor-pointer"

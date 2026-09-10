@@ -24,7 +24,52 @@ assetRouter.get("/", async (req: Request, res: Response): Promise<void> => {
     const workspaceId = await workspaceRepository.ensurePersonalWorkspace(user.uid, user.email || "");
     const assets = await assetRepository.list(workspaceId, limit, offset);
 
-    res.json({ success: true, assets });
+    // Batch-resolve ephemeral signed URLs for private storage assets
+    const pathsToSign = assets
+      .map((a) => a.storagePath)
+      .filter((path) =>
+        Boolean(
+          path &&
+          !path.startsWith("http:") &&
+          !path.startsWith("https:") &&
+          !path.startsWith("data:") &&
+          !path.startsWith("#")
+        )
+      );
+
+    let signedUrlMap = new Map<string, string>();
+    if (pathsToSign.length > 0) {
+      try {
+        signedUrlMap = await storageService.getSignedUrls(pathsToSign, 86400);
+      } catch (signErr) {
+        console.warn("Batch signed URL resolution partial error:", signErr);
+      }
+    }
+
+    const enrichedAssets = assets.map((asset) => {
+      let signedUrl: string | undefined;
+      if (
+        asset.storagePath.startsWith("http:") ||
+        asset.storagePath.startsWith("https:") ||
+        asset.storagePath.startsWith("data:")
+      ) {
+        signedUrl = asset.storagePath;
+      } else if (signedUrlMap.has(asset.storagePath)) {
+        signedUrl = signedUrlMap.get(asset.storagePath);
+      } else {
+        const cleanPath = asset.storagePath.replace(/^\/+/, "");
+        if (signedUrlMap.has(cleanPath)) {
+          signedUrl = signedUrlMap.get(cleanPath);
+        }
+      }
+
+      return {
+        ...asset,
+        ...(signedUrl ? { signedUrl } : {}),
+      };
+    });
+
+    res.json({ success: true, assets: enrichedAssets });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed to load assets";
     console.error("GET /api/assets error:", message);

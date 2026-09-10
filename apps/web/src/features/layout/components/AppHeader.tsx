@@ -12,6 +12,7 @@ export interface AppHeaderProps {
   isDarkMode: boolean;
   setIsDarkMode: (dark: boolean) => void;
   currentPath?: string;
+  navigateTo?: (path: string) => void;
 }
 
 export const AppHeader: React.FC<AppHeaderProps> = ({
@@ -22,12 +23,25 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   setView,
   isDarkMode,
   setIsDarkMode,
-  currentPath
+  currentPath,
+  navigateTo
 }) => {
-  const pageTitle = currentPath === '/history/creative'
+  const pageTitle = currentPath === '/assets' || view === 'assets'
+    ? 'Asset Library'
+    : currentPath === '/settings'
+    ? 'Workspace Settings'
+    : currentPath === '/history/creative'
     ? 'Creative History'
     : currentPath === '/history/credits'
     ? 'Credit History'
+    : view === 'curation'
+    ? 'Curation Inbox'
+    : view === 'plan'
+    ? 'Enterprise Plan'
+    : view === 'topup'
+    ? 'Credit Top-Up'
+    : view === 'admin'
+    ? 'Admin Operations'
     : selectedGem.name;
 
   return (
@@ -43,7 +57,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
         <motion.div 
-          key={currentPath?.startsWith('/history/') ? currentPath : selectedGem.id}
+          key={currentPath || view || selectedGem.id}
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           className="flex items-center gap-2"
@@ -56,7 +70,12 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         {view !== 'plan' && view !== 'topup' ? (
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setView('topup')}
+              onClick={() => {
+                setView('topup');
+                if (navigateTo && currentPath !== '/workspace') {
+                  navigateTo('/workspace');
+                }
+              }}
               className="inline-flex items-center gap-1.5 px-4.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-sm text-xs font-bold uppercase tracking-wider shadow-sm hover:shadow-md transition-all cursor-pointer"
               id="topup-button"
               title="Booster / Top-Up Credits"
@@ -65,7 +84,12 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               <span>Credit Top-Up</span>
             </button>
             <button
-              onClick={() => setView('plan')}
+              onClick={() => {
+                setView('plan');
+                if (navigateTo && currentPath !== '/workspace') {
+                  navigateTo('/workspace');
+                }
+              }}
               className="inline-flex items-center gap-1.5 px-4.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-sm text-xs font-bold uppercase tracking-wider shadow-sm hover:shadow-md transition-all cursor-pointer"
               id="upgrade-button"
               title="Upgrade Pricing Plans"
@@ -76,7 +100,12 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           </div>
         ) : (
           <button
-            onClick={() => setView('tools')}
+            onClick={() => {
+              setView('tools');
+              if (navigateTo && currentPath !== '/workspace') {
+                navigateTo('/workspace');
+              }
+            }}
             className="inline-flex items-center gap-1.5 px-4.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-sm text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
             id="workspace-back-button"
             title="Return to Workspace content"

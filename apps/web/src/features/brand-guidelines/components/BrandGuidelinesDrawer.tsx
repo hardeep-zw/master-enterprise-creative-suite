@@ -24,6 +24,7 @@ export const BrandGuidelinesDrawer: React.FC<BrandGuidelinesDrawerProps> = ({
 }) => {
   const [isGeneratingLogo, setIsGeneratingLogo] = useState(false);
   const [logoPrompt, setLogoPrompt] = useState('');
+  const [logoImgError, setLogoImgError] = useState(false);
   const [eraseConfirmState, setEraseConfirmState] = useState<'idle' | 'confirming'>('idle');
 
   if (!isOpen || !editingGuidelines) return null;
@@ -32,12 +33,15 @@ export const BrandGuidelinesDrawer: React.FC<BrandGuidelinesDrawerProps> = ({
     if (!logoPrompt.trim()) return;
     try {
       setIsGeneratingLogo(true);
-      const generated = await generateBrandLogoAI(
-        editingGuidelines.name,
-        editingGuidelines.industry,
-        editingGuidelines.colors || [],
-        logoPrompt || editingGuidelines.tone
-      );
+      setLogoImgError(false);
+      const generated = await generateBrandLogoAI({
+        name: editingGuidelines.name,
+        industry: editingGuidelines.industry,
+        colors: editingGuidelines.colors || [],
+        tone: editingGuidelines.tone,
+        tagline: editingGuidelines.tagline,
+        userIdea: logoPrompt
+      });
 
       setEditingGuidelines(prev => ({ ...prev, logo: generated }));
     } catch (e) {
@@ -52,6 +56,7 @@ export const BrandGuidelinesDrawer: React.FC<BrandGuidelinesDrawerProps> = ({
     if (file && file.type.startsWith('image/')) {
       const reader = new FileReader();
       reader.onloadend = () => {
+        setLogoImgError(false);
         setEditingGuidelines(prev => ({ ...prev, logo: reader.result as string }));
       };
       reader.readAsDataURL(file);
@@ -152,10 +157,26 @@ export const BrandGuidelinesDrawer: React.FC<BrandGuidelinesDrawerProps> = ({
               </label>
               <div className="flex items-center gap-4">
                 <div className="w-16 h-16 rounded-sm bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center overflow-hidden p-2 shrink-0">
-                  {editingGuidelines.logo ? (
-                    <img src={editingGuidelines.logo} alt="Logo" className="max-w-full max-h-full object-contain" referrerPolicy="no-referrer" />
+                  {editingGuidelines.logo && !logoImgError ? (
+                    <img 
+                      src={editingGuidelines.logo} 
+                      alt="Logo" 
+                      className="max-w-full max-h-full object-contain" 
+                      referrerPolicy="no-referrer"
+                      onError={() => setLogoImgError(true)} 
+                    />
                   ) : (
-                    <span className="text-xs text-slate-400">No Logo</span>
+                    <div className="flex flex-col items-center justify-center text-center">
+                      <div 
+                        className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white mb-0.5"
+                        style={{ backgroundColor: editingGuidelines.colors?.[0] || '#e11d48' }}
+                      >
+                        {(editingGuidelines.name?.[0] || 'B').toUpperCase()}
+                      </div>
+                      <span className="text-[8px] text-slate-400 uppercase font-mono">
+                        {logoImgError ? 'Invalid' : 'No Logo'}
+                      </span>
+                    </div>
                   )}
                 </div>
                 <div className="space-y-2 flex-1">

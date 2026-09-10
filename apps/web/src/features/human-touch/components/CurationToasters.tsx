@@ -91,23 +91,37 @@ export const CurationToasters: React.FC<CurationToastersProps> = ({
               className={cn(
                 "p-4 rounded-sm shadow-xl flex items-start gap-3 pointer-events-auto border",
                 n.status === 'completed'
-                  ? "bg-emerald-950/90 border-emerald-500/40 text-white"
-                  : n.status === 'in-progress'
-                  ? "bg-blue-950/90 border-blue-500/40 text-white"
-                  : "bg-slate-900 border-slate-700 text-white"
+                  ? "bg-slate-900 border-emerald-500/40 text-white"
+                  : n.status === 'in_review' || n.status === 'under-review'
+                  ? "bg-slate-900 border-sky-500/40 text-white"
+                  : n.status === 'rejected'
+                  ? "bg-slate-900 border-rose-500/40 text-white"
+                  : "bg-slate-900 border-amber-500/30 text-white"
               )}
             >
               <div className={cn(
                 "p-1.5 rounded-sm shrink-0",
-                n.status === 'completed' ? "bg-emerald-500/20 text-emerald-400" : "bg-blue-500/20 text-blue-400"
+                n.status === 'completed' 
+                  ? "bg-emerald-500/20 text-emerald-400" 
+                  : n.status === 'in_review' || n.status === 'under-review'
+                  ? "bg-sky-500/20 text-sky-400"
+                  : n.status === 'rejected'
+                  ? "bg-rose-500/20 text-rose-400"
+                  : "bg-amber-500/20 text-amber-400"
               )}>
                 {n.status === 'completed' ? <Check size={16} /> : <Clock size={16} />}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold capitalize">
-                  {n.status === 'completed' ? 'Curation Complete!' : 'Curation In Progress'}
+                <p className="text-xs font-bold font-mono uppercase tracking-wider">
+                  {n.status === 'completed' 
+                    ? 'Deliverable Ready' 
+                    : n.status === 'in_review' || n.status === 'under-review'
+                    ? 'Artist In Review' 
+                    : n.status === 'rejected'
+                    ? 'Unable to Fulfill'
+                    : 'Request Queued'}
                 </p>
-                <p className="text-[11px] text-slate-300 truncate">
+                <p className="text-[11px] text-slate-300 truncate mt-0.5">
                   {n.completedComment || `Your ${n.assetType || 'asset'} curation status updated.`}
                 </p>
                 <button
@@ -115,9 +129,9 @@ export const CurationToasters: React.FC<CurationToastersProps> = ({
                     setUserNotifications(prev => prev.map(item => item.id === n.id ? { ...item, read: true } : item));
                     onSelectUserRequest(n.id);
                   }}
-                  className="mt-2 text-[10px] font-bold text-emerald-400 hover:text-emerald-300 uppercase tracking-wider cursor-pointer"
+                  className="mt-2 text-[10px] font-bold font-mono text-white hover:underline uppercase tracking-wider cursor-pointer block"
                 >
-                  View in Inbox →
+                  View in Curation Inbox →
                 </button>
               </div>
               <button

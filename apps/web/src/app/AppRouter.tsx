@@ -6,6 +6,22 @@ import { GenerationLoader } from '@web/shared/components/GenerationLoader.js';
 import { BrandSetup } from '../features/brand-guidelines/components/BrandSetup.js';
 import type { BrandGuidelines } from '@shared-types/brand.js';
 import { getAppDestination, isPublicRoute, normalizePath } from '@web/lib/navigation.js';
+import { AdminConsole } from '@web/features/admin/pages/AdminConsole.js';
+
+const ADMIN_EMAILS = [
+  'writopedia.platform@gmail.com',
+  'pujan.work1@gmail.com',
+  'hardeep.pathak@gmail.com',
+  'avdhesh.babaria@gmail.com',
+  'business@writopedia.com'
+];
+
+const isAdminUser = (user: any): boolean => {
+  if (!user) return false;
+  if (user.admin) return true;
+  if (user.email && ADMIN_EMAILS.includes(user.email.toLowerCase())) return true;
+  return false;
+};
 
 export interface AppRouterProps {
   currentPath: string;
@@ -89,16 +105,24 @@ export const AppRouter: React.FC<AppRouterProps> = ({
         return;
       }
 
-      // C. Visiting /workspace or /history when brand setup is NOT complete -> Forward to /brand-init
-      if ((pathname === '/workspace' || pathname.startsWith('/history/')) && !brandSetupComplete && !isInitialDataLoading) {
+      // C. Visiting /workspace, /history, /settings, or /assets when brand setup is NOT complete -> Forward to /brand-init
+      if ((pathname === '/workspace' || pathname.startsWith('/history/') || pathname === '/settings' || pathname === '/assets') && !brandSetupComplete && !isInitialDataLoading) {
         const cached = localStorage.getItem('brandSetupComplete');
         if (cached !== 'true') {
           navigateTo('/brand-init', { replace: true });
           return;
         }
       }
+
+      // D. Visiting /admin routes -> Enforce admin role authorization
+      if (pathname.startsWith('/admin')) {
+        if (!isAdminUser(user)) {
+          navigateTo('/workspace', { replace: true });
+        }
+        return;
+      }
     }
-  }, [user?.uid, loading, isInitialDataLoading, brandSetupComplete, currentPath, navigateTo]);
+  }, [user?.uid, user?.admin, user?.email, loading, isInitialDataLoading, brandSetupComplete, currentPath, navigateTo]);
 
   const { pathname } = normalizePath(currentPath);
 
@@ -136,6 +160,27 @@ export const AppRouter: React.FC<AppRouterProps> = ({
         onLogin={handleEnterProduct}
         user={user}
         credits={credits}
+      />
+    );
+  }
+
+  if (pathname.startsWith('/admin')) {
+    if (loading) {
+      return (
+        <div className="h-screen w-screen flex flex-col items-center justify-center bg-[#090d16] text-slate-100">
+          <GenerationLoader title="Writopedia Operations Console" subtitle="Authenticating administrator credentials..." />
+        </div>
+      );
+    }
+    if (!isAdminUser(user)) {
+      return null;
+    }
+    return (
+      <AdminConsole
+        currentPath={currentPath}
+        navigateTo={navigateTo}
+        user={user}
+        onLogout={handleLogout}
       />
     );
   }

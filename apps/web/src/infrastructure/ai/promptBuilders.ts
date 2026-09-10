@@ -414,14 +414,59 @@ export async function initializeBrandKit(
   return { guidelines, assets };
 }
 
+export interface GenerateBrandLogoOptions {
+  name: string;
+  industry: string;
+  colors?: string[];
+  tone?: string;
+  tagline?: string;
+  style?: 'minimalist' | 'monogram' | 'luxury' | 'geometric' | 'badge';
+  userIdea?: string;
+}
+
 export async function generateBrandLogoAI(
-  name: string,
-  industry: string,
-  colors: string[],
-  tone?: string
+  nameOrOptions: string | GenerateBrandLogoOptions,
+  industryArg?: string,
+  colorsArg?: string[],
+  toneArg?: string,
+  taglineArg?: string,
+  styleArg?: string,
+  userIdeaArg?: string
 ): Promise<string> {
+  const options: GenerateBrandLogoOptions = typeof nameOrOptions === 'object'
+    ? nameOrOptions
+    : {
+        name: nameOrOptions,
+        industry: industryArg || 'Modern Business',
+        colors: colorsArg || [],
+        tone: toneArg,
+        tagline: taglineArg,
+        style: (styleArg as any) || 'minimalist',
+        userIdea: userIdeaArg
+      };
+
+  const { name, industry, colors = [], tone, tagline, style = 'minimalist', userIdea } = options;
+
+  // Derive style descriptive direction for 2026 brand identity standards
+  let styleDirective = 'Ultra-modern minimalist vector logo mark and typographic harmony';
+  if (style === 'monogram') {
+    styleDirective = `Luxury typographic monogram and bespoke lettermark based on the initials of "${name}"`;
+  } else if (style === 'luxury') {
+    styleDirective = `High-end luxury fashion brand crest with elegant lines and prestigious balance`;
+  } else if (style === 'geometric') {
+    styleDirective = `Sacred geometric emblem, negative space mastery, golden-ratio vector silhouette`;
+  } else if (style === 'badge') {
+    styleDirective = `Modern circular brand emblem with clean typography integrated around the perimeter`;
+  }
+
+  // Construct comprehensive brand-relatable prompt
+  const colorStr = colors && colors.length > 0 ? colors.join(', ') : 'rich black, warm gold, off-white';
+  const taglineStr = tagline && tagline.trim() ? `, with subtext tagline "${tagline.trim()}" in clean modern sans-serif` : '';
+  const ideaStr = userIdea && userIdea.trim() ? `. Specific concept: ${userIdea.trim()}` : '';
+
+  const logoPrompt = `Masterpiece professional brand logo for "${name}". Industry: ${industry}. Tone: ${tone || 'Engaging and modern'}. Style: ${styleDirective}${ideaStr}. Typographic design: Centered iconic brand symbol with pristine typography for brand name "${name}"${taglineStr}. Color Palette: Strictly harmonious brand colors (${colorStr}) on a clean, solid, pure white background #ffffff. Aesthetic: 2026 Behance / Dribbble trending brand identity, crisp vector lines, golden ratio symmetry, immaculate spacing, high contrast, isolated logo. Negative prompt: photorealistic photo, 3d glossy render, realistic person, noisy background, muddy gradients, watermark, signature, blurry text, low resolution, skewed perspective, mockup scene.`;
+
   try {
-    const logoPrompt = `An iconic, world-class modern minimalist logo for brand "${name}", ${industry} industry, tone ${tone || 'Professional'}. Clean vector art, geometric silhouette, brand colors ${colors.join(', ')}, solid clean pure white background #ffffff. Single centered mark, award-winning graphic design.`;
     const renderData = await apiClient.post("/api/campaign/render", {
       prompt: logoPrompt,
       size: "1:1",
@@ -432,7 +477,6 @@ export async function generateBrandLogoAI(
     console.warn("Fal logo generation fallback to AI client:", err);
   }
 
-
   const ai = getAI();
   const logoResponse = await withRetry(() =>
     ai.models.generateContent({
@@ -441,15 +485,18 @@ export async function generateBrandLogoAI(
         parts: [
           {
             text: `Create an iconic, world-class professional logo for a brand named "${name}".
-          Industry: ${industry}. 
-          Tone: ${tone || 'Professional'}. 
-          
-          DESIGN REQUIREMENTS:
-          - Style: Minimalist, geometric, and timeless.
-          - Composition: A clean, high-contrast silhouette.
-          - Colors: Primarily use ${colors[0] || 'black'} and ${colors[1] || 'white'}.
-          - Background: Solid, pure white background (#FFFFFF).
-          - Format: Vector-style art with sharp edges.`
+Industry: ${industry}. 
+Tone: ${tone || 'Professional'}. 
+${tagline ? `Tagline: "${tagline}".` : ''}
+${userIdea ? `Concept: ${userIdea}.` : ''}
+
+DESIGN REQUIREMENTS:
+- Style: ${styleDirective}.
+- Typography: Include the brand name "${name}" spelled perfectly in clean, modern typography.
+- Composition: Centered, balanced, high-contrast silhouette with generous negative space.
+- Colors: Primarily use brand colors: ${colorStr}.
+- Background: Solid, pure white background (#FFFFFF).
+- Format: Vector-style graphic art with sharp crisp edges.`
           }
         ]
       },

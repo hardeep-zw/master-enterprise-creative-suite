@@ -2,17 +2,18 @@ import React from 'react';
 import { AppSidebar, type HistoryItem } from '../features/layout/components/AppSidebar.js';
 import { AppHeader } from '../features/layout/components/AppHeader.js';
 import { AssetLibrary } from '@web/features/assets/components/AssetLibrary.js';
+import { AssetLibraryPage } from '@web/features/assets/pages/AssetLibraryPage.js';
 import { CurationQueuePanel } from '@web/features/assets/components/CurationQueuePanel.js';
 import { EnterprisePlan } from '@web/features/billing/components/EnterprisePlan.js';
 import { CreditTopUp } from '@web/features/billing/components/CreditTopUp.js';
-import { AdminPanel } from '@web/features/admin/components/AdminPanel.js';
 import { CampaignDeckWorkspace } from '@web/features/campaigns/components/CampaignDeckWorkspace.js';
 import { CampaignStrategistWorkspace } from '@web/features/campaigns/components/CampaignStrategistWorkspace.js';
 import { CreativeWorkspace } from '../features/creative/components/CreativeWorkspace.js';
 import { BrandGuidelinesDrawer } from '../features/brand-guidelines/components/BrandGuidelinesDrawer.js';
 import { HumanTouchRequestModal } from '../features/human-touch/components/HumanTouchRequestModal.js';
 import { CurationToasters } from '../features/human-touch/components/CurationToasters.js';
-import { Check, X } from 'lucide-react';
+import { cancelHumanTouchRequest } from '@web/infrastructure/repositories/humanTouchRepository.js';
+import { Check, X, AlertCircle, ArrowRight, Sparkles } from 'lucide-react';
 import { InsufficientCreditsModal } from '@web/features/billing/components/InsufficientCreditsModal.js';
 import { useCreditGate } from '@web/features/billing/context/CreditGateContext.js';
 import type { Gem } from '@shared-types/creative.js';
@@ -20,8 +21,12 @@ import type { BrandGuidelines } from '@shared-types/brand.js';
 import { type TextWordLayer } from '../features/canvas/hooks/useCanvasEditor.js';
 import { CreativeHistoryPage } from '@web/features/history/pages/CreativeHistoryPage.js';
 import { CreditHistoryPage } from '@web/features/history/pages/CreditHistoryPage.js';
+import { SettingsPage } from '@web/features/settings/pages/SettingsPage.js';
 
 export interface AppShellProps {
+  theme?: 'dark' | 'light' | 'system';
+  setTheme?: (theme: 'dark' | 'light' | 'system') => void;
+  onSaveBrandGuidelines?: (guidelines: BrandGuidelines) => Promise<void>;
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
   brandGuidelines: BrandGuidelines;
@@ -60,6 +65,11 @@ export interface AppShellProps {
   assets: any[];
   setAssets: React.Dispatch<React.SetStateAction<any[]>>;
   saveAsset: (asset: any) => Promise<void>;
+  onOpenAssetInStudio?: (asset: any) => void;
+  onUseAssetInDestination?: (
+    asset: any,
+    destination: { gemId: string; roleId: string; roleName: string }
+  ) => void;
   addToHistory: (entry: any) => Promise<void>;
   navigateTo: (path: string, options?: { replace?: boolean }) => void;
   handleLogout: () => Promise<void>;
@@ -271,6 +281,22 @@ export const AppShell: React.FC<AppShellProps> = (props) => {
 
   const { returnedFromTopUpNotice, returnToGem, dismissTopUpNotice } = useCreditGate();
 
+  const [logoAlertDismissed, setLogoAlertDismissed] = React.useState<boolean>(() => {
+    try {
+      return sessionStorage.getItem('dismissed_workspace_logo_alert') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const handleCancelUserRequest = async (requestId: string) => {
+    try {
+      await cancelHumanTouchRequest(requestId);
+    } catch (err) {
+      console.error("Failed to cancel user curation request:", err);
+    }
+  };
+
   return (
     <div className="flex h-screen bg-white dark:bg-slate-950 overflow-hidden">
       {/* Toast notifications */}
@@ -282,10 +308,14 @@ export const AppShell: React.FC<AppShellProps> = (props) => {
         onSelectUserRequest={(id) => {
           setSelectedCurationRequestId(id);
           setView('curation');
+          if (navigateTo && props.currentPath !== '/workspace') {
+            navigateTo('/workspace');
+          }
         }}
-        onSelectAdminRequest={(id) => {
-          setSelectedAdminRequestId(id);
-          setView('admin');
+        onSelectAdminRequest={(_id) => {
+          if (navigateTo) {
+            navigateTo('/admin/curation');
+          }
         }}
       />
 
@@ -299,6 +329,9 @@ export const AppShell: React.FC<AppShellProps> = (props) => {
         onSelectGem={(gem) => {
           setSelectedGem(gem);
           setView('tools');
+          if (navigateTo && props.currentPath !== '/workspace') {
+            navigateTo('/workspace');
+          }
         }}
         view={view}
         setView={setView}
@@ -334,10 +367,42 @@ export const AppShell: React.FC<AppShellProps> = (props) => {
           isDarkMode={isDarkMode}
           setIsDarkMode={setIsDarkMode}
           currentPath={props.currentPath}
+          navigateTo={navigateTo}
         />
 
         {/* View Switcher Area */}
-        {props.currentPath === '/history/creative' ? (
+        {props.currentPath === '/settings' ? (
+          <SettingsPage
+            navigateTo={navigateTo}
+            theme={props.theme || (isDarkMode ? 'dark' : 'light')}
+            setTheme={props.setTheme || ((t) => setIsDarkMode(t === 'dark'))}
+            sidebarOpen={sidebarOpen}
+            setSidebarOpen={setSidebarOpen}
+            brandGuidelines={brandGuidelines}
+            setBrandGuidelines={props.setBrandGuidelines}
+            onSaveBrandGuidelines={props.onSaveBrandGuidelines || (async (g) => {
+              props.setBrandGuidelines(g);
+              props.setEditingGuidelines(g);
+              await handleSaveBrandGuidelines();
+            })}
+            onWipeBrandParameters={handleWipeBrandParameters}
+            user={user}
+            credits={credits}
+            isSyncing={isSyncing}
+            aspectRatio={aspectRatio}
+            setAspectRatio={props.setAspectRatio}
+            audioVoice={props.selectedVoice}
+            setAudioVoice={props.setSelectedVoice}
+            audioVolume={props.audioVolume}
+            setAudioVolume={props.setAudioVolume}
+            bakeLogoOnGeneration={props.bakeLogoOnGeneration}
+            setBakeLogoOnGeneration={props.setBakeLogoOnGeneration}
+            logoPosition={props.logoPosition}
+            setLogoPosition={props.setLogoPosition}
+            logoScale={props.logoScale}
+            setLogoScale={props.setLogoScale}
+          />
+        ) : props.currentPath === '/history/creative' ? (
           <CreativeHistoryPage
             history={history}
             onSelectHistoryItem={(item) => {
@@ -359,21 +424,27 @@ export const AppShell: React.FC<AppShellProps> = (props) => {
               navigateTo('/workspace');
             }}
           />
-        ) : view === 'assets' ? (
-          <AssetLibrary 
+        ) : props.currentPath === '/assets' ? (
+          <AssetLibraryPage 
             assets={assets} 
             setAssets={setAssets} 
-            onClose={() => setView('tools')} 
             brandGuidelines={brandGuidelines}
             isSyncing={isSyncing}
             setIsSyncing={setIsSyncing}
+            onBack={() => navigateTo('/workspace')}
+            onNavigateToWorkspace={() => navigateTo('/workspace')}
+            onOpenAssetInStudio={props.onOpenAssetInStudio}
+            onUseAssetInDestination={props.onUseAssetInDestination}
           />
         ) : view === 'curation' ? (
           <CurationQueuePanel 
             requests={userCurationRequests}
             onClose={() => setView('tools')}
             selectedRequestId={selectedCurationRequestId}
-            onSelectRequest={() => setSelectedCurationRequestId(null)}
+            onSelectRequest={(id) => setSelectedCurationRequestId(id)}
+            onOpenAssetInStudio={props.onOpenAssetInStudio}
+            onSaveAssetToLibrary={props.saveAsset}
+            onCancelRequest={handleCancelUserRequest}
           />
         ) : view === 'plan' ? (
           <EnterprisePlan 
@@ -398,14 +469,73 @@ export const AppShell: React.FC<AppShellProps> = (props) => {
             }}
           />
         ) : view === 'admin' ? (
-          <AdminPanel 
-            onClose={() => setView('tools')}
-            selectedRequestId={selectedAdminRequestId}
-            onClearSelectedRequest={() => setSelectedAdminRequestId(null)}
-          />
+          <div className="flex-1 flex flex-col items-center justify-center p-8 space-y-4">
+            <p className="text-sm font-mono text-slate-400">Admin Operations Console</p>
+            <button
+              onClick={() => {
+                setView('tools');
+                if (navigateTo) navigateTo('/admin');
+              }}
+              className="px-4 py-2 rounded bg-rose-600 hover:bg-rose-500 text-xs font-mono text-white transition"
+            >
+              Open Operations Console (/admin)
+            </button>
+          </div>
         ) : (
           <div className="flex-1 overflow-y-auto p-4 md:p-8">
             <div className={selectedGem.id === 'campaign-strategist-y' ? "max-w-[1400px] mx-auto space-y-6" : "max-w-5xl mx-auto space-y-6"}>
+              {/* Workspace Onboarding Logo Alert Banner */}
+              {!brandGuidelines?.logo && !logoAlertDismissed && (
+                <div className="relative overflow-hidden rounded-xl border border-amber-500/30 bg-gradient-to-r from-amber-500/15 via-amber-500/5 to-transparent p-4 sm:p-5 text-slate-800 dark:text-slate-100 shadow-sm backdrop-blur-sm animate-in fade-in slide-in-from-top-2 duration-300">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="flex items-start sm:items-center gap-3.5">
+                      <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 shrink-0 ring-1 ring-amber-500/30">
+                        <AlertCircle className="w-5 h-5" />
+                      </div>
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-sm font-bold tracking-tight text-slate-900 dark:text-white">
+                            Brand Logo Not Added
+                          </h4>
+                          <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                            Setup Required
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-600 dark:text-slate-400 max-w-xl">
+                          Your workspace doesn't have an official brand logo yet. Add or generate one to personalize your creatives and auto-watermark exports.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                      <button
+                        onClick={() => {
+                          if (navigateTo) {
+                            navigateTo('/settings#brand');
+                          }
+                        }}
+                        className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold uppercase tracking-wider rounded-lg bg-amber-500 hover:bg-amber-600 text-white shadow-sm transition-all active:scale-95 cursor-pointer"
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>Add Brand Logo</span>
+                        <ArrowRight className="w-3.5 h-3.5 ml-0.5" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          setLogoAlertDismissed(true);
+                          try {
+                            sessionStorage.setItem('dismissed_workspace_logo_alert', 'true');
+                          } catch {}
+                        }}
+                        className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                        title="Dismiss alert"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {selectedGem.id === 'bundles-campaigns' ? (
                 <CampaignDeckWorkspace 
                   brandGuidelines={brandGuidelines}
@@ -417,6 +547,7 @@ export const AppShell: React.FC<AppShellProps> = (props) => {
                   onSaveHistory={addToHistory}
                   currentActiveResult={result}
                   onClearActiveResult={() => setResult(null)}
+                  setHumanTouchItem={setHumanTouchItem}
                 />
               ) : selectedGem.id === 'campaign-strategist-y' ? (
                 <CampaignStrategistWorkspace 
@@ -449,10 +580,7 @@ export const AppShell: React.FC<AppShellProps> = (props) => {
           <div>© 2026 {brandGuidelines.name} Studio AI</div>
           <div className="flex items-center gap-6">
             <button 
-              onClick={() => {
-                setEditingGuidelines(JSON.parse(JSON.stringify(brandGuidelines)));
-                setShowGuidelines(true);
-              }} 
+              onClick={() => navigateTo('/settings#brand')} 
               className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
             >
               Brand Config

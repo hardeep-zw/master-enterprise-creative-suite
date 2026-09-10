@@ -204,6 +204,70 @@ export class PaymentRepository {
     return data ? data.length : 0;
   }
 
+  async listAll(limit: number = 50, status?: string): Promise<Array<PaymentRecord & { userEmail?: string }>> {
+    const supabase = getSupabaseAdmin();
+    if (!supabase) return [];
+
+    let query = supabase
+      .from("payments")
+      .select("*, profiles:user_id(email, full_name)")
+      .order("created_at", { ascending: false })
+      .limit(limit);
+
+    if (status && status !== "all") {
+      query = query.eq("status", status);
+    }
+
+    const { data, error } = await query;
+    if (error || !data) {
+      console.error("PaymentRepository.listAll error:", error);
+      return [];
+    }
+
+    return data.map((row: any) => ({
+      ...this.mapRow(row),
+      userEmail: row.profiles?.email || undefined,
+    }));
+  }
+
+  async getMetrics(): Promise<{
+    capturedCount: number;
+    createdCount: number;
+    failedCount: number;
+    totalAmountSubunits: number;
+  }> {
+    const supabase = getSupabaseAdmin();
+    if (!supabase) {
+      return { capturedCount: 0, createdCount: 0, failedCount: 0, totalAmountSubunits: 0 };
+    }
+
+    const { data, error } = await supabase
+      .from("payments")
+      .select("status, amount_subunits");
+
+    if (error || !data) {
+      return { capturedCount: 0, createdCount: 0, failedCount: 0, totalAmountSubunits: 0 };
+    }
+
+    let capturedCount = 0;
+    let createdCount = 0;
+    let failedCount = 0;
+    let totalAmountSubunits = 0;
+
+    for (const row of data) {
+      if (row.status === "captured") {
+        capturedCount++;
+        totalAmountSubunits += (row.amount_subunits || 0);
+      } else if (row.status === "created") {
+        createdCount++;
+      } else if (row.status === "failed") {
+        failedCount++;
+      }
+    }
+
+    return { capturedCount, createdCount, failedCount, totalAmountSubunits };
+  }
+
   private mapRow(data: any): PaymentRecord {
     return {
       id: data.id,

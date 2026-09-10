@@ -23,7 +23,9 @@ import {
   Music,
   ChevronLeft,
   ChevronRight,
-  Loader2
+  Loader2,
+  AlertCircle,
+  ArrowRight
 } from 'lucide-react';
 import { AppIcon } from '@web/shared/components/icons/AppIconRegistry.js';
 import { BrandLogo } from '@web/features/brand/components/BrandLogo.js';
@@ -131,24 +133,39 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
       </button>
 
       {/* Brand Identity Header / Studio Switcher */}
-      <div className={cn(
-        "flex flex-col items-center border-b border-slate-100 dark:border-slate-800 shrink-0 transition-all duration-300",
-        sidebarOpen ? "p-8" : "p-4"
-      )}>
-        <BrandLogo 
-          collapsed={!sidebarOpen} 
-          customLogo={brandGuidelines.logo} 
-          brandName={brandGuidelines.name} 
-          className={cn(
-            "transition-all duration-500",
-            sidebarOpen ? "h-24 w-24 mb-4" : "h-10 w-10"
-          )} 
-        />
+      <div 
+        onClick={() => {
+          if (navigateTo) {
+            navigateTo('/settings#brand');
+          } else {
+            onOpenSettings();
+          }
+        }}
+        className={cn(
+          "flex flex-col items-center border-b border-slate-100 dark:border-slate-800 shrink-0 transition-all duration-300 cursor-pointer group hover:bg-slate-50/50 dark:hover:bg-slate-800/30",
+          sidebarOpen ? "p-8" : "p-4"
+        )}
+        title="Brand Identity Settings"
+      >
+        <div className="relative">
+          <BrandLogo 
+            collapsed={!sidebarOpen} 
+            customLogo={brandGuidelines.logo} 
+            brandName={brandGuidelines.name} 
+            className={cn(
+              "transition-all duration-500",
+              sidebarOpen ? "h-24 w-24 mb-4" : "h-10 w-10"
+            )} 
+          />
+          {!brandGuidelines?.logo && !sidebarOpen && (
+            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-rose-500 ring-2 ring-white dark:ring-slate-900 animate-pulse" title="Logo not added" />
+          )}
+        </div>
         {sidebarOpen && (
           <motion.div 
             initial={{ opacity: 0, y: -5 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mt-2 text-center flex flex-col items-center"
+            className="mt-2 text-center flex flex-col items-center w-full"
           >
             <span className="font-semibold text-sm text-slate-900 dark:text-slate-100">{brandGuidelines?.name || 'Brand Studio'}</span>
             <p className="text-[9px] text-slate-500 dark:text-slate-400 font-bold tracking-widest uppercase mt-1">Creative Suite</p>
@@ -156,6 +173,31 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
               <Coins size={12} className="shrink-0" />
               {credits} Credits
             </div>
+
+            {/* Proactive Brand Logo Alert */}
+            {!brandGuidelines?.logo && (
+              <div 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (navigateTo) {
+                    navigateTo('/settings#brand');
+                  } else {
+                    onOpenSettings();
+                  }
+                }}
+                className="mt-2.5 w-full flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-600 dark:text-rose-400 transition-all cursor-pointer group/logoalert shadow-2xs text-left"
+                title="Your brand logo is not added. Click to add or generate with AI."
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <AlertCircle size={13} className="shrink-0 text-rose-500 animate-pulse" />
+                  <div className="min-w-0">
+                    <span className="text-[11px] font-bold block leading-tight truncate">Logo not added</span>
+                    <span className="text-[9px] text-slate-500 dark:text-slate-400 block leading-tight">Add or generate</span>
+                  </div>
+                </div>
+                <ArrowRight size={11} className="shrink-0 text-rose-400 group-hover/logoalert:translate-x-0.5 transition-transform" />
+              </div>
+            )}
           </motion.div>
         )}
       </div>
@@ -165,13 +207,19 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
           Creative Gems
         </div>
         {GENERIC_GEMS.map((gem) => {
-          const isSelected = selectedGem.id === gem.id;
+          const isToolsWorkspace = (currentPath === '/workspace' || !currentPath || currentPath === '') && view === 'tools';
+          const isSelected = isToolsWorkspace && selectedGem.id === gem.id;
           const isAudio = gem.type === 'audio';
           const isGeneratingThisGem = generatingGemIds.includes(gem.id);
           return (
             <button
               key={gem.id}
-              onClick={() => onSelectGem(gem)}
+              onClick={() => {
+                onSelectGem(gem);
+                if (navigateTo && currentPath !== '/workspace') {
+                  navigateTo('/workspace');
+                }
+              }}
               className={cn(
                 "w-full flex items-center gap-3 p-3 rounded-sm transition-all group border cursor-pointer relative",
                 isSelected
@@ -250,21 +298,28 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
             Library & Plans
           </div>
           <button
-            onClick={() => setView('assets')}
+            onClick={() => {
+              setView('tools');
+              if (navigateTo) {
+                navigateTo('/assets');
+              } else {
+                setView('assets');
+              }
+            }}
             className={cn(
               "w-full flex items-center gap-3 p-3 rounded-sm transition-all group border mb-2 cursor-pointer",
-              view === 'assets'
+              currentPath === '/assets'
                 ? "bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 border-rose-100 dark:border-rose-900/60 shadow-sm" 
                 : "border-transparent text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white"
             )}
           >
-            <div className={cn("shrink-0", view === 'assets' ? "text-rose-600 dark:text-rose-400" : "text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300")}>
+            <div className={cn("shrink-0", currentPath === '/assets' ? "text-rose-600 dark:text-rose-400" : "text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300")}>
               <AppIcon name="filter-all" size={20} strokeWidth={1.75} />
             </div>
             {sidebarOpen && (
               <div className="text-left overflow-hidden">
                 <p className="font-medium text-sm whitespace-nowrap">Asset Library</p>
-                <p className={cn("text-[10px] truncate uppercase tracking-wider", view === 'assets' ? "text-rose-400 dark:text-rose-500" : "text-slate-500 dark:text-slate-400")}>
+                <p className={cn("text-[10px] truncate uppercase tracking-wider", currentPath === '/assets' ? "text-rose-400 dark:text-rose-500" : "text-slate-500 dark:text-slate-400")}>
                   Manage Assets
                 </p>
               </div>
@@ -275,15 +330,18 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
             onClick={() => {
               setView('curation');
               setUserNotifications(prev => prev.map(n => ({ ...n, read: true })));
+              if (navigateTo && currentPath !== '/workspace') {
+                navigateTo('/workspace');
+              }
             }}
             className={cn(
               "w-full flex items-center gap-3 p-3 rounded-sm transition-all group border mb-2 cursor-pointer",
-              view === 'curation'
+              (currentPath === '/workspace' && view === 'curation')
                 ? "bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 border-rose-100 dark:border-rose-900/60 shadow-sm" 
                 : "border-transparent text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white"
             )}
           >
-            <div className={cn("shrink-0 relative", view === 'curation' ? "text-rose-600 dark:text-rose-400" : "text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300")}>
+            <div className={cn("shrink-0 relative", (currentPath === '/workspace' && view === 'curation') ? "text-rose-600 dark:text-rose-400" : "text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300")}>
               <AppIcon name="human-touch" size={20} strokeWidth={1.75} className={cn(view !== 'curation' && userNotifications.filter(n => !n.read).length > 0 ? "animate-bounce text-rose-500" : "")} />
               {view !== 'curation' && userNotifications.filter(n => !n.read).length > 0 && (
                 <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-rose-500 border border-white dark:border-slate-900 rounded-full animate-ping" />
@@ -293,7 +351,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
               <div className="text-left overflow-hidden flex-1 flex items-center justify-between gap-1">
                 <div>
                   <span className="font-medium text-sm whitespace-nowrap block leading-tight">Curation Inbox</span>
-                  <span className={cn("text-[10px] truncate uppercase tracking-wider block font-mono", view === 'curation' ? "text-rose-500 dark:text-rose-400 font-semibold" : "text-slate-500 dark:text-slate-400")}>
+                  <span className={cn("text-[10px] truncate uppercase tracking-wider block font-mono", (currentPath === '/workspace' && view === 'curation') ? "text-rose-500 dark:text-rose-400 font-semibold" : "text-slate-500 dark:text-slate-400")}>
                     Curations released
                   </span>
                 </div>
@@ -306,21 +364,26 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
             )}
           </button>
           <button
-            onClick={() => setView('plan')}
+            onClick={() => {
+              setView('plan');
+              if (navigateTo && currentPath !== '/workspace') {
+                navigateTo('/workspace');
+              }
+            }}
             className={cn(
               "w-full flex items-center gap-3 p-3 rounded-sm transition-all group border cursor-pointer",
-              view === 'plan'
+              (currentPath === '/workspace' && view === 'plan')
                 ? "bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 border-rose-100 dark:border-rose-900/60 shadow-sm" 
                 : "border-transparent text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white"
             )}
           >
-            <div className={cn("shrink-0", view === 'plan' ? "text-rose-600 dark:text-rose-400" : "text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300")}>
+            <div className={cn("shrink-0", (currentPath === '/workspace' && view === 'plan') ? "text-rose-600 dark:text-rose-400" : "text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300")}>
               <AppIcon name="tier-enterprise" size={20} strokeWidth={1.75} />
             </div>
             {sidebarOpen && (
               <div className="text-left overflow-hidden">
                 <p className="font-medium text-sm whitespace-nowrap">Enterprise Plan</p>
-                <p className={cn("text-[10px] truncate uppercase tracking-wider", view === 'plan' ? "text-rose-400 dark:text-rose-500" : "text-slate-500 dark:text-slate-400")}>
+                <p className={cn("text-[10px] truncate uppercase tracking-wider", (currentPath === '/workspace' && view === 'plan') ? "text-rose-400 dark:text-rose-500" : "text-slate-500 dark:text-slate-400")}>
                   View Pricing
                 </p>
               </div>
@@ -328,39 +391,48 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
           </button>
 
           <button
-            onClick={() => setView('topup')}
+            onClick={() => {
+              setView('topup');
+              if (navigateTo && currentPath !== '/workspace') {
+                navigateTo('/workspace');
+              }
+            }}
             className={cn(
               "w-full flex items-center gap-3 p-3 rounded-sm transition-all group border cursor-pointer",
-              view === 'topup'
+              (currentPath === '/workspace' && view === 'topup')
                 ? "bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-900/60 shadow-sm" 
                 : "border-transparent text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white"
             )}
           >
-            <div className={cn("shrink-0", view === 'topup' ? "text-indigo-650 dark:text-indigo-400" : "text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300")}>
+            <div className={cn("shrink-0", (currentPath === '/workspace' && view === 'topup') ? "text-indigo-650 dark:text-indigo-400" : "text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300")}>
               <AppIcon name="credit-token" size={20} strokeWidth={1.75} />
             </div>
             {sidebarOpen && (
               <div className="text-left overflow-hidden">
                 <p className="font-medium text-sm whitespace-nowrap">Credit Top-Up</p>
-                <p className={cn("text-[10px] truncate uppercase tracking-wider", view === 'topup' ? "text-indigo-400 dark:text-indigo-500" : "text-slate-500 dark:text-slate-400")}>
+                <p className={cn("text-[10px] truncate uppercase tracking-wider", (currentPath === '/workspace' && view === 'topup') ? "text-indigo-400 dark:text-indigo-500" : "text-slate-500 dark:text-slate-400")}>
                   Add Balance
                 </p>
               </div>
             )}
           </button>
 
-          {user && (user.email === 'hardeep.pathak@gmail.com' || user.email === 'avdhesh.babaria@gmail.com') && (
+          {user && (user.admin || user.email === 'writopedia.platform@gmail.com' || user.email === 'pujan.work1@gmail.com' || user.email === 'hardeep.pathak@gmail.com' || user.email === 'avdhesh.babaria@gmail.com' || user.email === 'business@writopedia.com') && (
             <button
-              onClick={() => setView('admin')}
+              onClick={() => {
+                if (navigateTo) {
+                  navigateTo('/admin');
+                }
+              }}
               className={cn(
                 "w-full flex items-center gap-3 p-3 rounded-sm transition-all group border mt-2 cursor-pointer",
-                view === 'admin'
+                currentPath.startsWith('/admin')
                   ? "bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 border-rose-100 dark:border-rose-900/60 shadow-sm" 
                   : "border-transparent text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white"
               )}
             >
-              <div className={cn("shrink-0", view === 'admin' ? "text-rose-600 dark:text-rose-400" : "text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300")}>
-                <AppIcon name="trust-security" size={20} strokeWidth={1.75} className={cn(view !== 'admin' && adminNotifications.filter(n => !n.read).length > 0 ? "animate-bounce text-amber-500" : "")} />
+              <div className={cn("shrink-0", currentPath.startsWith('/admin') ? "text-rose-600 dark:text-rose-400" : "text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300")}>
+                <AppIcon name="trust-security" size={20} strokeWidth={1.75} className={cn(!currentPath.startsWith('/admin') && adminNotifications.filter(n => !n.read).length > 0 ? "animate-bounce text-amber-500" : "")} />
               </div>
               {sidebarOpen && (
                 <div className="text-left overflow-hidden flex-1">
@@ -372,8 +444,8 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
                       </span>
                     )}
                   </div>
-                  <p className={cn("text-[10px] truncate uppercase tracking-wider font-mono font-bold", view === 'admin' ? "text-rose-400 dark:text-rose-500" : "text-amber-500")}>
-                    Writopedia Queue
+                  <p className={cn("text-[10px] truncate uppercase tracking-wider font-mono font-bold", currentPath.startsWith('/admin') ? "text-rose-400 dark:text-rose-500" : "text-amber-500")}>
+                    Operations Console
                   </p>
                 </div>
               )}
@@ -389,6 +461,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
           {/* Creative History Navigation Item */}
           <button
             onClick={() => {
+              setView('tools');
               if (navigateTo) {
                 navigateTo('/history/creative');
               }
@@ -424,6 +497,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
           {/* Credit History Navigation Item */}
           <button
             onClick={() => {
+              setView('tools');
               if (navigateTo) {
                 navigateTo('/history/credits');
               }
@@ -484,10 +558,25 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
         </div>
 
         <button 
-          onClick={onOpenSettings}
-          className="w-full flex items-center gap-3 p-3 rounded-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+          onClick={() => {
+            setView('tools');
+            if (navigateTo) {
+              navigateTo('/settings');
+            } else {
+              onOpenSettings();
+            }
+          }}
+          className={cn(
+            "w-full flex items-center gap-3 p-3 rounded-sm transition-all group border cursor-pointer",
+            currentPath === '/settings'
+              ? "bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 border-rose-100 dark:border-rose-900/60 shadow-xs"
+              : "border-transparent text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white"
+          )}
+          title="Workspace Settings"
         >
-          <Settings size={20} />
+          <div className={cn("shrink-0", currentPath === '/settings' ? "text-rose-600 dark:text-rose-400" : "text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300")}>
+            <Settings size={20} />
+          </div>
           {sidebarOpen && <span className="text-sm font-medium">Settings</span>}
         </button>
 

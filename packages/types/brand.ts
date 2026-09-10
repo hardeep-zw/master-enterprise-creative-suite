@@ -17,6 +17,7 @@ export interface BrandGuidelines {
   typography: BrandTypography;
   logo?: string;
   logoDescription?: string;
+  tagline?: string;
   location?: string;
   voiceAccentStyle?: string;
   visualEthnicityStyle?: string;

@@ -64,16 +64,16 @@ export class BillingNotificationService {
       margin: 0;
       padding: 0;
       width: 100% !important;
-      background-color: #070a11;
+      background-color: #f8fafc;
       font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       -webkit-font-smoothing: antialiased;
     }
   </style>
 </head>
-<body style="margin: 0; padding: 32px 12px; background-color: #070a11; color: #f8fafc; font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+<body style="margin: 0; padding: 32px 12px; background-color: #f8fafc; color: #0f172a; font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
   
   <!-- PREHEADER (Hidden preview text in email clients) -->
-  <div style="display: none; max-height: 0px; overflow: hidden; font-size: 1px; line-height: 1px; color: #070a11; opacity: 0;">
+  <div style="display: none; max-height: 0px; overflow: hidden; font-size: 1px; line-height: 1px; color: #f8fafc; opacity: 0;">
     Your Writopedia workspace has been credited with +${params.creditsGranted} credits for ${params.planName}. Order ID: ${params.orderId}
   </div>
 
@@ -81,28 +81,28 @@ export class BillingNotificationService {
     <tr>
       <td align="center">
         <!-- MAIN CONTAINER (600px) -->
-        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #0f172a; border-radius: 16px; overflow: hidden; border: 1px solid rgba(221, 26, 70, 0.3); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 20px rgba(221, 26, 70, 0.1);">
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 0 20px rgba(225, 29, 72, 0.05);">
           
           <!-- BRAND CRIMSON TOP ACCENT BAR -->
           <tr>
-            <td height="4" style="background: linear-gradient(90deg, #dd1a46 0%, #ee5b75 50%, #ba1235 100%); line-height: 4px; font-size: 4px;">&nbsp;</td>
+            <td height="4" style="background: linear-gradient(90deg, #e11d48 0%, #f43f5e 50%, #be123c 100%); line-height: 4px; font-size: 4px;">&nbsp;</td>
           </tr>
 
           <!-- HEADER SECTION -->
           <tr>
-            <td style="padding: 36px 32px 28px 32px; text-align: center; background: radial-gradient(circle at 50% 0%, #1f0b12 0%, #0f172a 70%); border-bottom: 1px solid #1e293b;">
-              <!-- WRITOPEDIA WORDMARK WITH CRIMSON GLOW -->
+            <td style="padding: 36px 32px 28px 32px; text-align: center; background-color: #ffffff; border-bottom: 1px solid #f1f5f9;">
+              <!-- WRITOPEDIA WORDMARK -->
               <table border="0" cellpadding="0" cellspacing="0" align="center">
                 <tr>
                   <td align="center">
-                    <span style="font-size: 22px; font-weight: 800; letter-spacing: 3px; color: #ffffff; text-transform: uppercase;">
-                      WRITOPEDIA <span style="color: #dd1a46;">AI</span>
+                    <span style="font-size: 22px; font-weight: 800; letter-spacing: 3px; color: #0f172a; text-transform: uppercase;">
+                      WRITOPEDIA <span style="color: #e11d48;">AI</span>
                     </span>
                   </td>
                 </tr>
                 <tr>
                   <td align="center" style="padding-top: 6px;">
-                    <span style="font-size: 11px; font-weight: 600; letter-spacing: 2px; color: #94a3b8; text-transform: uppercase;">
+                    <span style="font-size: 11px; font-weight: 600; letter-spacing: 2px; color: #64748b; text-transform: uppercase;">
                       Enterprise Creative Suite &bull; Payment Receipt
                     </span>
                   </td>
@@ -114,25 +114,25 @@ export class BillingNotificationService {
           <!-- HERO ENTITLEMENT CARD -->
           <tr>
             <td style="padding: 32px 32px 24px 32px;">
-              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #141e33; border-radius: 12px; border: 1px solid #22324e; text-align: center;">
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; text-align: center;">
                 <tr>
                   <td style="padding: 24px 20px;">
                     <!-- STATUS BADGE -->
                     <table border="0" cellpadding="0" cellspacing="0" align="center" style="margin-bottom: 12px;">
                       <tr>
-                        <td style="background-color: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 9999px; padding: 4px 14px; font-size: 11px; font-weight: 700; letter-spacing: 1px; color: #34d399; text-transform: uppercase;">
+                        <td style="background-color: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 9999px; padding: 4px 14px; font-size: 11px; font-weight: 700; letter-spacing: 1px; color: #059669; text-transform: uppercase;">
                           &#10003; Payment Verified &bull; Balance Credited
                         </td>
                       </tr>
                     </table>
 
                     <!-- CREDITS GRANTED METRIC -->
-                    <div style="font-size: 40px; font-weight: 800; color: #ffffff; letter-spacing: -1px; line-height: 1.1; margin: 8px 0;">
-                      +${params.creditsGranted.toLocaleString("en-US")} <span style="font-size: 20px; font-weight: 700; color: #dd1a46; letter-spacing: 1px; vertical-align: middle;">CREDITS</span>
+                    <div style="font-size: 40px; font-weight: 800; color: #0f172a; letter-spacing: -1px; line-height: 1.1; margin: 8px 0;">
+                      +${params.creditsGranted.toLocaleString("en-US")} <span style="font-size: 20px; font-weight: 700; color: #e11d48; letter-spacing: 1px; vertical-align: middle;">CREDITS</span>
                     </div>
 
-                    <div style="color: #94a3b8; font-size: 13px; font-weight: 500; margin-top: 6px;">
-                      Allocated to Workspace <span style="font-family: 'JetBrains Mono', monospace; color: #cbd5e1; font-weight: 600;">${params.workspaceId}</span>
+                    <div style="color: #64748b; font-size: 13px; font-weight: 500; margin-top: 6px;">
+                      Allocated to Workspace <span style="font-family: 'JetBrains Mono', monospace; color: #0f172a; font-weight: 600;">${params.workspaceId}</span>
                     </div>
                   </td>
                 </tr>
@@ -143,67 +143,67 @@ export class BillingNotificationService {
           <!-- TRANSACTION BREAKDOWN TABLE -->
           <tr>
             <td style="padding: 0 32px 28px 32px;">
-              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #111a2e; border-radius: 12px; border: 1px solid #1f2d47;">
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0;">
                 <tr>
                   <td style="padding: 8px 20px;">
                     <table border="0" cellpadding="0" cellspacing="0" width="100%" style="border-collapse: collapse; font-size: 13px;">
                       
                       <!-- PLAN -->
-                      <tr style="border-bottom: 1px solid #1f2d47;">
-                        <td style="padding: 12px 0; color: #94a3b8; font-weight: 500;">Purchased Plan</td>
-                        <td style="padding: 12px 0; text-align: right; color: #ffffff; font-weight: 700;">
-                          <span style="background-color: rgba(221, 26, 70, 0.15); color: #ee5b75; border: 1px solid rgba(221, 26, 70, 0.3); border-radius: 4px; padding: 2px 8px; font-size: 12px;">
+                      <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 12px 0; color: #64748b; font-weight: 500;">Purchased Plan</td>
+                        <td style="padding: 12px 0; text-align: right; color: #0f172a; font-weight: 700;">
+                          <span style="background-color: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; border-radius: 4px; padding: 2px 8px; font-size: 12px; font-weight: 700;">
                             ${params.planName}
                           </span>
                         </td>
                       </tr>
 
                       <!-- AMOUNT -->
-                      <tr style="border-bottom: 1px solid #1f2d47;">
-                        <td style="padding: 12px 0; color: #94a3b8; font-weight: 500;">Amount Paid</td>
-                        <td style="padding: 12px 0; text-align: right; color: #ffffff; font-weight: 800; font-size: 15px;">
-                          ${formattedAmount} <span style="color: #94a3b8; font-size: 12px; font-weight: 600;">${params.currency}</span>
+                      <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 12px 0; color: #64748b; font-weight: 500;">Amount Paid</td>
+                        <td style="padding: 12px 0; text-align: right; color: #0f172a; font-weight: 800; font-size: 15px;">
+                          ${formattedAmount} <span style="color: #64748b; font-size: 12px; font-weight: 600;">${params.currency}</span>
                         </td>
                       </tr>
 
                       <!-- ORDER ID -->
-                      <tr style="border-bottom: 1px solid #1f2d47;">
-                        <td style="padding: 12px 0; color: #94a3b8; font-weight: 500;">Razorpay Order ID</td>
-                        <td style="padding: 12px 0; text-align: right; font-family: 'JetBrains Mono', Consolas, monospace; color: #ee5b75; font-size: 12px; font-weight: 600;">
+                      <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 12px 0; color: #64748b; font-weight: 500;">Razorpay Order ID</td>
+                        <td style="padding: 12px 0; text-align: right; font-family: 'JetBrains Mono', Consolas, monospace; color: #e11d48; font-size: 12px; font-weight: 600;">
                           ${params.orderId}
                         </td>
                       </tr>
 
                       <!-- PAYMENT ID -->
                       ${params.paymentId ? `
-                      <tr style="border-bottom: 1px solid #1f2d47;">
-                        <td style="padding: 12px 0; color: #94a3b8; font-weight: 500;">Razorpay Payment ID</td>
-                        <td style="padding: 12px 0; text-align: right; font-family: 'JetBrains Mono', Consolas, monospace; color: #cbd5e1; font-size: 12px;">
+                      <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 12px 0; color: #64748b; font-weight: 500;">Razorpay Payment ID</td>
+                        <td style="padding: 12px 0; text-align: right; font-family: 'JetBrains Mono', Consolas, monospace; color: #334155; font-size: 12px;">
                           ${params.paymentId}
                         </td>
                       </tr>
                       ` : ""}
 
                       <!-- PAYMENT METHOD -->
-                      <tr style="border-bottom: 1px solid #1f2d47;">
-                        <td style="padding: 12px 0; color: #94a3b8; font-weight: 500;">Payment Method</td>
-                        <td style="padding: 12px 0; text-align: right; color: #e2e8f0; font-weight: 600;">
+                      <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 12px 0; color: #64748b; font-weight: 500;">Payment Method</td>
+                        <td style="padding: 12px 0; text-align: right; color: #0f172a; font-weight: 600;">
                           ${params.paymentMethod || "Razorpay Gateway (Card / UPI / Netbanking)"}
                         </td>
                       </tr>
 
                       <!-- FULFILLMENT SOURCE -->
-                      <tr style="border-bottom: 1px solid #1f2d47;">
-                        <td style="padding: 12px 0; color: #94a3b8; font-weight: 500;">Fulfillment Channel</td>
-                        <td style="padding: 12px 0; text-align: right; color: #e2e8f0; font-weight: 600;">
+                      <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 12px 0; color: #64748b; font-weight: 500;">Fulfillment Channel</td>
+                        <td style="padding: 12px 0; text-align: right; color: #0f172a; font-weight: 600;">
                           ${params.source === "webhook" ? "Server-to-Server Webhook (Automated)" : "Instant Cryptographic Client Verify"}
                         </td>
                       </tr>
 
                       <!-- DATE & TIME -->
                       <tr>
-                        <td style="padding: 12px 0; color: #94a3b8; font-weight: 500;">Receipt Date</td>
-                        <td style="padding: 12px 0; text-align: right; color: #94a3b8; font-size: 12px;">
+                        <td style="padding: 12px 0; color: #64748b; font-weight: 500;">Receipt Date</td>
+                        <td style="padding: 12px 0; text-align: right; color: #64748b; font-size: 12px;">
                           ${dateStr}
                         </td>
                       </tr>
@@ -221,7 +221,7 @@ export class BillingNotificationService {
               <table border="0" cellpadding="0" cellspacing="0" align="center" width="100%">
                 <tr>
                   <td align="center">
-                    <a href="https://ai.writopedia.com/workspace" target="_blank" style="display: block; background: linear-gradient(135deg, #e52c4d 0%, #dd1a46 50%, #ba1235 100%); color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 700; letter-spacing: 0.5px; padding: 14px 28px; border-radius: 8px; box-shadow: 0 6px 20px rgba(221, 26, 70, 0.4); text-transform: uppercase;">
+                    <a href="https://ai.writopedia.com/workspace" target="_blank" style="display: block; background: linear-gradient(135deg, #e11d48 0%, #be123c 100%); color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 700; letter-spacing: 0.5px; padding: 14px 28px; border-radius: 8px; box-shadow: 0 4px 14px rgba(225, 29, 72, 0.25); text-transform: uppercase;">
                       Open Writopedia AI Workspace &rarr;
                     </a>
                   </td>
@@ -233,11 +233,11 @@ export class BillingNotificationService {
           <!-- SUPPORT & ENTERPRISE INVOICE CARD -->
           <tr>
             <td style="padding: 0 32px 28px 32px;">
-              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #0b1120; border-radius: 8px; border: 1px dashed #24344d; text-align: center;">
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border-radius: 8px; border: 1px dashed #cbd5e1; text-align: center;">
                 <tr>
-                  <td style="padding: 14px 16px; font-size: 12px; color: #94a3b8; line-height: 1.5;">
+                  <td style="padding: 14px 16px; font-size: 12px; color: #64748b; line-height: 1.5;">
                     Need a custom GSTIN tax invoice or corporate accounting receipt?<br>
-                    Email our enterprise finance team at <a href="mailto:business@writopedia.com" style="color: #ee5b75; text-decoration: none; font-weight: 600;">business@writopedia.com</a>.
+                    Email our enterprise finance team at <a href="mailto:business@writopedia.com" style="color: #e11d48; text-decoration: none; font-weight: 600;">business@writopedia.com</a>.
                   </td>
                 </tr>
               </table>
@@ -246,11 +246,11 @@ export class BillingNotificationService {
 
           <!-- FOOTER -->
           <tr>
-            <td style="padding: 24px 32px 32px 32px; text-align: center; border-top: 1px solid #1e293b; background-color: #090d16;">
+            <td style="padding: 24px 32px 32px 32px; text-align: center; border-top: 1px solid #f1f5f9; background-color: #f8fafc;">
               <p style="margin: 0 0 6px 0; font-size: 12px; color: #64748b; font-weight: 500;">
                 &copy; 2026 Writopedia AI Inc. &bull; All rights reserved.
               </p>
-              <p style="margin: 0; font-size: 11px; color: #475569; line-height: 1.4;">
+              <p style="margin: 0; font-size: 11px; color: #94a3b8; line-height: 1.4;">
                 Secured via Razorpay 256-bit SSL Gateway &amp; Supabase PostgreSQL Atomic Ledger.<br>
                 This automated payment confirmation was dispatched to ${this.adminEmail}.
               </p>

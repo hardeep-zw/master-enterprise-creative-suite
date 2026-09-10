@@ -43,42 +43,51 @@ salesRouter.post(["/", "/contact-sales"], async (req, res) => {
 <html>
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>New Enterprise / Contact Inquiry</title>
 </head>
-<body style="margin: 0; padding: 24px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #090d16; color: #f1f5f9;">
-  <div style="max-width: 600px; margin: 0 auto; background: #0f172a; border: 1px solid #1e293b; border-radius: 12px; overflow: hidden;">
-    <div style="background: linear-gradient(135deg, #dd1a46, #9b0b2c); padding: 20px 24px;">
-      <h2 style="margin: 0; color: #ffffff; font-size: 20px; font-weight: 700; letter-spacing: -0.02em;">New Enterprise Inquiry</h2>
-      <p style="margin: 4px 0 0; color: rgba(255,255,255,0.85); font-size: 13px;">Writopedia AI Platform · Lead Notification</p>
+<body style="margin: 0; padding: 24px 12px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f8fafc; color: #0f172a;">
+  <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);">
+    <div style="height: 4px; background: #e11d48;"></div>
+    <div style="padding: 24px 28px; border-bottom: 1px solid #e2e8f0; background: #ffffff;">
+      <span style="font-size: 11px; font-weight: 800; letter-spacing: 2px; color: #e11d48; text-transform: uppercase;">
+        ENTERPRISE INQUIRY &bull; LEAD NOTIFICATION
+      </span>
+      <h2 style="margin: 4px 0 0; color: #0f172a; font-size: 20px; font-weight: 700; letter-spacing: -0.02em;">
+        New Contact Submission
+      </h2>
+      <p style="margin: 4px 0 0; color: #64748b; font-size: 13px;">Writopedia AI Platform &bull; Inbound Customer Lead</p>
     </div>
-    <div style="padding: 24px;">
+    <div style="padding: 28px;">
       <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-        <tr>
-          <td style="padding: 8px 0; color: #94a3b8; width: 140px; font-weight: 600;">Contact Name:</td>
-          <td style="padding: 8px 0; color: #ffffff; font-weight: 500;">${contactName}</td>
+        <tr style="border-bottom: 1px solid #f1f5f9;">
+          <td style="padding: 10px 0; color: #64748b; width: 140px; font-weight: 600;">Contact Name:</td>
+          <td style="padding: 10px 0; color: #0f172a; font-weight: 600;">${contactName}</td>
         </tr>
-        <tr>
-          <td style="padding: 8px 0; color: #94a3b8; font-weight: 600;">Email Address:</td>
-          <td style="padding: 8px 0; color: #38bdf8;"><a href="mailto:${email}" style="color: #38bdf8; text-decoration: none;">${email}</a></td>
+        <tr style="border-bottom: 1px solid #f1f5f9;">
+          <td style="padding: 10px 0; color: #64748b; font-weight: 600;">Email Address:</td>
+          <td style="padding: 10px 0; color: #e11d48;"><a href="mailto:${email}" style="color: #e11d48; text-decoration: none; font-weight: 600;">${email}</a></td>
         </tr>
-        <tr>
-          <td style="padding: 8px 0; color: #94a3b8; font-weight: 600;">Company / Brand:</td>
-          <td style="padding: 8px 0; color: #ffffff;">${companyName}</td>
+        <tr style="border-bottom: 1px solid #f1f5f9;">
+          <td style="padding: 10px 0; color: #64748b; font-weight: 600;">Company / Brand:</td>
+          <td style="padding: 10px 0; color: #0f172a;">${companyName}</td>
         </tr>
-        <tr>
-          <td style="padding: 8px 0; color: #94a3b8; font-weight: 600;">Team Size:</td>
-          <td style="padding: 8px 0; color: #ffffff;">${teamSize}</td>
+        <tr style="border-bottom: 1px solid #f1f5f9;">
+          <td style="padding: 10px 0; color: #64748b; font-weight: 600;">Team Size:</td>
+          <td style="padding: 10px 0; color: #0f172a;">${teamSize}</td>
         </tr>
-        <tr>
-          <td style="padding: 8px 0; color: #94a3b8; font-weight: 600;">Lead ID:</td>
-          <td style="padding: 8px 0; color: #cbd5e1; font-family: monospace;">${leadRecord?.id || "N/A"}</td>
+        <tr style="border-bottom: 1px solid #f1f5f9;">
+          <td style="padding: 10px 0; color: #64748b; font-weight: 600;">Lead ID:</td>
+          <td style="padding: 10px 0; color: #475569; font-family: monospace;">${leadRecord?.id || "N/A"}</td>
         </tr>
       </table>
-      <div style="margin-top: 16px; padding: 16px; background: #182235; border-radius: 8px; border: 1px solid #334155;">
-        <p style="margin: 0 0 8px; color: #94a3b8; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">Requirements / Message:</p>
-        <p style="margin: 0; color: #f8fafc; font-size: 14px; line-height: 1.6; white-space: pre-wrap;">${message}</p>
+      <div style="margin-top: 20px; padding: 16px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+        <p style="margin: 0 0 8px; color: #64748b; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">Requirements / Message:</p>
+        <p style="margin: 0; color: #1e293b; font-size: 14px; line-height: 1.6; white-space: pre-wrap;">${message}</p>
       </div>
-      <p style="margin: 20px 0 0; color: #64748b; font-size: 11px;">Generated by Writopedia AI Platform Server at ${new Date().toUTCString()}</p>
+      <p style="margin: 24px 0 0; color: #94a3b8; font-size: 11px; text-align: center; border-top: 1px solid #f1f5f9; padding-top: 16px;">
+        Generated by Writopedia AI Platform Server &bull; ${new Date().toUTCString()}
+      </p>
     </div>
   </div>
 </body>

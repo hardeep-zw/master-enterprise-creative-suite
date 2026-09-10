@@ -9,6 +9,8 @@ const ADMIN_EMAILS = new Set([
   "hardeep.pathak@gmail.com",
   "avdhesh.babaria@gmail.com",
   "business@writopedia.com",
+  "writopedia.platform@gmail.com",
+  "pujan.work1@gmail.com",
 ]);
 
 export interface AuthenticatedUser {

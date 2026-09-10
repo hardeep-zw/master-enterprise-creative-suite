@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../features/auth/hooks/useAuth.js';
-import { savePreferences, loadPreferences } from '@web/lib/preferences.js';
+import { savePreferences, loadPreferences, resolveIsDark, applyThemeToDocument } from '@web/lib/preferences.js';
 import type { Gem } from '@shared-types/creative.js';
 import type { BrandGuidelines } from '@shared-types/brand.js';
 import { GENERIC_GEMS } from '@web/infrastructure/ai/modelRegistry.js';
@@ -98,14 +98,15 @@ export function App() {
     }
   }, [selectedGem?.id]);
 
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [isDarkMode, setIsDarkMode] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(() => loadPreferences().sidebarOpen);
+  const [theme, setTheme] = useState<'dark' | 'light' | 'system'>(() => loadPreferences().theme || 'system');
+  const [isDarkMode, setIsDarkMode] = useState(() => resolveIsDark(loadPreferences().theme || 'system'));
   const [isSyncing, setIsSyncing] = useState(false);
   const [isInitialDataLoading, setIsInitialDataLoading] = useState(false);
   const isInitialDataLoadedRef = useRef(false);
 
   // Creative Preference Toggle
-  const [bakeLogoOnGeneration, setBakeLogoOnGeneration] = useState(false);
+  const [bakeLogoOnGeneration, setBakeLogoOnGeneration] = useState(() => loadPreferences().bakeLogoOnGeneration);
 
   // Asset & History Persistence
   const [assets, setAssets] = useState<any[]>([]);
@@ -176,14 +177,22 @@ export function App() {
     }
   });
 
-  // Dark Mode Sync
+  // Theme & Dark Mode Sync with OS media query listener
   useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
+    const dark = resolveIsDark(theme);
+    setIsDarkMode(dark);
+    applyThemeToDocument(dark);
+
+    if (theme === 'system' && typeof window !== 'undefined' && window.matchMedia) {
+      const mql = window.matchMedia('(prefers-color-scheme: dark)');
+      const handleMediaChange = (e: MediaQueryListEvent) => {
+        setIsDarkMode(e.matches);
+        applyThemeToDocument(e.matches);
+      };
+      mql.addEventListener('change', handleMediaChange);
+      return () => mql.removeEventListener('change', handleMediaChange);
     }
-  }, [isDarkMode]);
+  }, [theme]);
 
   // Handle URL Routing Changes with canonical normalization and replace option
   const navigateTo = (path: string, options?: { replace?: boolean }) => {
@@ -282,12 +291,53 @@ export function App() {
       }
     );
 
-    // 5. Subscribe to Human Touch Queue (if Admin)
-    let unsubQueue = () => {};
-    if (user.email === 'hardeep.pathak@gmail.com' || user.email === 'avdhesh.babaria@gmail.com') {
-      unsubQueue = subscribeHumanTouchQueue((queue) => {
-        setAdminCurationRequests(queue);
-      });
+    // 5. Subscribe to Human Touch Queue
+    // All authenticated users subscribe to their workspace queue so Curation Inbox & notifications stay fresh
+    const unsubUserQueue = subscribeHumanTouchQueue(
+      (queue) => {
+        setUserCurationRequests((prev) => {
+          if (prev.length > 0) {
+            queue.forEach((newReq) => {
+              const oldReq = prev.find((p) => p.id === newReq.id);
+              if (oldReq && oldReq.status !== newReq.status) {
+                setUserNotifications((notifs) => [
+                  {
+                    id: `notif-${Date.now()}-${newReq.id}`,
+                    status: newReq.status,
+                    assetType: newReq.assetType,
+                    completedComment: newReq.completedComment,
+                    timestamp: Date.now(),
+                    read: false,
+                  },
+                  ...notifs,
+                ]);
+              }
+            });
+          }
+          return queue;
+        });
+      },
+      undefined,
+      { scope: 'workspace', intervalMs: 8000 }
+    );
+
+    // If Admin user, also subscribe to the global operational desk queue
+    let unsubAdminQueue = () => {};
+    const isAdmin = Boolean(
+      (user as any).admin || 
+      user.email === 'writopedia.platform@gmail.com' ||
+      user.email === 'hardeep.pathak@gmail.com' || 
+      user.email === 'avdhesh.babaria@gmail.com' ||
+      user.email === 'business@writopedia.com'
+    );
+    if (isAdmin) {
+      unsubAdminQueue = subscribeHumanTouchQueue(
+        (queue) => {
+          setAdminCurationRequests(queue);
+        },
+        undefined,
+        { scope: 'all', intervalMs: 8000 }
+      );
     }
 
     return () => {
@@ -295,7 +345,8 @@ export function App() {
       unsubAssets();
       unsubAccount();
       unsubBrand();
-      unsubQueue();
+      unsubUserQueue();
+      unsubAdminQueue();
     };
   }, [user?.uid]);
 
@@ -312,6 +363,133 @@ export function App() {
       creativeExecution.setGemPrompt(item.gemId, item.prompt);
     }
     setView('tools');
+  };
+
+  const handleOpenAssetInStudio = (asset: any) => {
+    // 1. Determine target Gem based on asset type
+    let targetGemId = 'standard-image';
+    if (asset.type === 'video') {
+      targetGemId = 'cinematic-video';
+    } else if (asset.type === 'audio') {
+      targetGemId = 'audio-studio';
+    } else if (asset.type === 'doc') {
+      targetGemId = 'strategy-captions';
+    } else if (asset.type === 'image') {
+      targetGemId = 'standard-image';
+    }
+
+    const gem = GENERIC_GEMS.find(g => g.id === targetGemId) || GENERIC_GEMS[3];
+    setSelectedGem(gem);
+
+    // 2. Set the creative result so canvas/player immediately displays it
+    creativeExecution.setGemResult(gem.id, asset.data);
+    creativeExecution.setResult(asset.data);
+
+    // 3. Set the prompt if available
+    const cleanPrompt = asset.prompt || (asset.name ? asset.name.replace(/^(Layout|Render|Video|Story|Voiceover):\s*/i, '') : '');
+    creativeExecution.setGemPrompt(gem.id, cleanPrompt);
+    creativeExecution.setPrompt(cleanPrompt);
+
+    // 4. Reset text layers if switching canvas
+    canvasEditor.setTextLayers([]);
+
+    // 5. Switch view to tools and navigate to /workspace
+    setView('tools');
+    navigateTo('/workspace');
+  };
+
+  const handleUseAssetInDestination = (
+    asset: any,
+    destination: { gemId: string; roleId: string; roleName: string }
+  ) => {
+    const targetGem = GENERIC_GEMS.find((g) => g.id === destination.gemId);
+    if (!targetGem) return;
+
+    // 1. Prepare asset payload matching the slot schema
+    const assetPayload = {
+      id: asset.id,
+      name: asset.name,
+      data: asset.data
+    };
+
+    // 2. Mark this asset as selected in library so downstream selection stays in sync
+    setAssets((prev) =>
+      prev.map((a) => (a.id === asset.id ? { ...a, selected: true } : a))
+    );
+
+    // 3. Update target gem's specific state slice
+    switch (destination.roleId) {
+      case 'product':
+      case 'product_shot':
+      case 'product_theme':
+      case 'story_ref':
+        creativeExecution.updateGemState(targetGem.id, { productContext: assetPayload });
+        break;
+
+      case 'face':
+      case 'character_face':
+        creativeExecution.updateGemState(targetGem.id, { faceContext: assetPayload });
+        break;
+
+      case 'ingredient':
+        creativeExecution.updateGemState(targetGem.id, (prev) => ({
+          ingredientsContexts: [
+            ...prev.ingredientsContexts.filter((item) => item.id !== asset.id),
+            assetPayload
+          ].slice(0, 3)
+        }));
+        break;
+
+      case 'first_frame':
+        creativeExecution.updateGemState(targetGem.id, { firstFrameContext: assetPayload });
+        break;
+
+      case 'last_frame':
+        creativeExecution.updateGemState(targetGem.id, { lastFrameContext: assetPayload });
+        break;
+
+      case 'general_ref':
+        creativeExecution.updateGemState(targetGem.id, (prev) => ({
+          videoReferences: [
+            ...prev.videoReferences.filter((item) => item.id !== asset.id),
+            { ...assetPayload, role: 'subject', type: 'image' }
+          ].slice(0, 3)
+        }));
+        break;
+
+      case 'video_guide':
+        creativeExecution.updateGemState(targetGem.id, (prev) => ({
+          videoReferences: [
+            ...prev.videoReferences.filter((item) => item.id !== asset.id),
+            { ...assetPayload, role: 'motion', type: 'video' }
+          ].slice(0, 3)
+        }));
+        break;
+
+      case 'audio_track':
+        creativeExecution.updateGemState(targetGem.id, (prev) => ({
+          videoReferences: [
+            ...prev.videoReferences.filter((item) => item.id !== asset.id),
+            { ...assetPayload, role: 'audio_guide', type: 'audio' }
+          ].slice(0, 3)
+        }));
+        break;
+
+      case 'visual_context':
+      case 'text_context':
+      case 'campaign_brief':
+      case 'script_source':
+      default:
+        // Multimodal / text reference context attaches to canonical selectedAssets
+        break;
+    }
+
+    // 4. Select the target gem
+    setSelectedGem(targetGem);
+
+    // 5. Switch view to tools and navigate to workspace
+    setView('tools');
+    navigateTo('/workspace');
   };
 
   const handleDeleteHistoryItem = async (e: React.MouseEvent, id: string) => {
@@ -374,16 +552,19 @@ export function App() {
     }
   };
 
-  const handleSaveBrandGuidelines = async () => {
-    setBrandGuidelines(editingGuidelines);
+  const handleSaveBrandGuidelines = async (newGuidelines?: BrandGuidelines) => {
+    const target = newGuidelines || editingGuidelines;
+    setBrandGuidelines(target);
+    setEditingGuidelines(target);
     setShowGuidelines(false);
-    savePreferences({ brandGuidelines: editingGuidelines });
+    savePreferences({ brandGuidelines: target });
     if (user) {
       setIsSyncing(true);
       try {
-        await saveBrandGuidelines(user.uid, editingGuidelines, 'default');
+        await saveBrandGuidelines(user.uid, target, 'default');
       } catch (e) {
         console.error("Failed to sync brand guidelines to cloud:", e);
+        throw e;
       } finally {
         setIsSyncing(false);
       }
@@ -415,28 +596,30 @@ export function App() {
     if (!user || !humanTouchItem) return;
     try {
       setHumanTouchSubmitting(true);
+      setHumanTouchSuccessMsg(null);
       const reqId = `touch-${Date.now()}`;
       await submitHumanTouchRequest(reqId, {
         userId: user.uid,
         userEmail: user.email || 'Anonymous',
         emailReceipt: user.email || 'Anonymous',
-        assetType: humanTouchItem.role || 'Image',
+        assetType: humanTouchItem.role || 'image',
         assetUrl: humanTouchItem.imageUrl || '',
         originalPrompt: humanTouchItem.prompt || '',
-        modelsUsed: humanTouchItem.modelsUsed || 'gemini-2.5-flash-image',
+        modelsUsed: humanTouchItem.modelsUsed || 'Writopedia Production Model',
         userComment: humanTouchComment || '',
         status: 'pending',
         timestamp: Date.now()
       });
 
-      setHumanTouchSuccessMsg('Request submitted! Our creative experts are on it.');
+      setHumanTouchSuccessMsg('Human Touch request sent. Your request is now in the curation queue.');
       setTimeout(() => {
         setHumanTouchItem(null);
         setHumanTouchComment('');
         setHumanTouchSuccessMsg(null);
-      }, 2500);
-    } catch (e) {
+      }, 2200);
+    } catch (e: any) {
       console.error("Failed to submit human touch curation request:", e);
+      throw e;
     } finally {
       setHumanTouchSubmitting(false);
     }
@@ -500,6 +683,12 @@ export function App() {
       >
         <AppShell 
           currentPath={currentPath}
+          theme={theme}
+          setTheme={(t) => {
+            setTheme(t);
+            savePreferences({ theme: t });
+          }}
+          onSaveBrandGuidelines={handleSaveBrandGuidelines}
           sidebarOpen={sidebarOpen}
           setSidebarOpen={setSidebarOpen}
           brandGuidelines={brandGuidelines}
@@ -517,7 +706,12 @@ export function App() {
         view={view}
         setView={setView}
         isDarkMode={isDarkMode}
-        setIsDarkMode={setIsDarkMode}
+        setIsDarkMode={(dark) => {
+          setIsDarkMode(dark);
+          const newTheme = dark ? 'dark' : 'light';
+          setTheme(newTheme);
+          savePreferences({ theme: newTheme });
+        }}
         user={user}
         userNotifications={userNotifications}
         setUserNotifications={setUserNotifications}
@@ -538,6 +732,8 @@ export function App() {
         assets={assets}
         setAssets={setAssets}
         saveAsset={saveAsset}
+        onOpenAssetInStudio={handleOpenAssetInStudio}
+        onUseAssetInDestination={handleUseAssetInDestination}
         addToHistory={async (entry) => {
           setHistory(prev => [entry, ...prev].slice(0, 50));
           if (user) {
