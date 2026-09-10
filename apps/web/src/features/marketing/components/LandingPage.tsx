@@ -6,6 +6,10 @@ import {
   MessageSquare, 
   Info, 
   Check, 
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
+  Coins,
   ArrowRight, 
   X, 
   Menu,
@@ -17,6 +21,7 @@ import {
   Briefcase 
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { submitSalesInquiry } from '@web/infrastructure/repositories/salesRepository.js';
 
 // Custom, highly accurate logo component displaying the uploaded brand asset from the public folder
 export function WritopediaLogo({ className = "h-9 sm:h-10", onClick }: { className?: string; onClick?: () => void }) {
@@ -45,23 +50,84 @@ interface LandingPageProps {
   onOpenWorkspace: () => void;
   onLogin: () => void;
   navigateTo?: (path: string) => void;
+  user?: any;
+  credits?: number;
 }
 
-export default function LandingPage({ onOpenWorkspace, onLogin, navigateTo }: LandingPageProps) {
+export default function LandingPage({ onOpenWorkspace, onLogin, navigateTo, user, credits }: LandingPageProps) {
   const [activeModal, setActiveModal] = useState<'plans' | 'legal' | 'contact' | 'about' | 'documentation' | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [contactForm, setContactForm] = useState({ name: '', email: '', message: '' });
   const [contactSubmitted, setContactSubmitted] = useState(false);
+  const [isSubmittingContact, setIsSubmittingContact] = useState(false);
+  const [contactError, setContactError] = useState<string | null>(null);
   const [legalTab, setLegalTab] = useState<'privacy' | 'terms' | 'refund'>('privacy');
 
-  const handleContactSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setContactSubmitted(true);
-    setTimeout(() => {
+  const openContactModal = () => {
+    setContactError(null);
+    if (user) {
+      setContactForm(prev => ({
+        ...prev,
+        email: prev.email || user.email || '',
+        name: prev.name || user.displayName || user.user_metadata?.full_name || ''
+      }));
+    }
+    setActiveModal('contact');
+  };
+
+  const closeContactModal = () => {
+    setActiveModal(null);
+    if (contactSubmitted) {
       setContactSubmitted(false);
       setContactForm({ name: '', email: '', message: '' });
-      setActiveModal(null);
-    }, 2000);
+      setContactError(null);
+    }
+  };
+
+  const handleContactSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isSubmittingContact) return;
+
+    const trimmedName = contactForm.name.trim();
+    const trimmedEmail = contactForm.email.trim();
+    const trimmedMessage = contactForm.message.trim();
+
+    if (!trimmedName || trimmedName.length < 2) {
+      setContactError('Please provide your full name (at least 2 characters).');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!trimmedEmail || !emailRegex.test(trimmedEmail)) {
+      setContactError('Please enter a valid business email address.');
+      return;
+    }
+
+    if (!trimmedMessage || trimmedMessage.length < 5) {
+      setContactError('Please describe your requirements (at least 5 characters).');
+      return;
+    }
+
+    setIsSubmittingContact(true);
+    setContactError(null);
+
+    try {
+      await submitSalesInquiry('landing_lead', {
+        companyName: 'Landing Page Lead',
+        contactName: trimmedName,
+        email: trimmedEmail,
+        teamSize: 'Enterprise Inquiry',
+        message: trimmedMessage,
+        status: 'pending',
+        timestamp: Date.now()
+      });
+      setContactSubmitted(true);
+    } catch (err: any) {
+      console.error('Failed to submit contact query:', err);
+      setContactError('Unable to send your message right now. Please try again or email business@writopedia.com directly.');
+    } finally {
+      setIsSubmittingContact(false);
+    }
   };
 
   return (
@@ -98,7 +164,7 @@ export default function LandingPage({ onOpenWorkspace, onLogin, navigateTo }: La
               Website
             </a>
             <button 
-              onClick={() => setActiveModal('contact')}
+              onClick={openContactModal}
               className="hover:text-crimson transition-colors cursor-pointer"
             >
               Contact
@@ -106,29 +172,70 @@ export default function LandingPage({ onOpenWorkspace, onLogin, navigateTo }: La
           </nav>
 
           {/* Right Action */}
-          <div className="flex items-center gap-2 sm:gap-3 lg:gap-4 shrink-0">
-            <button 
-              onClick={onLogin}
-              className="hidden sm:inline-flex text-[13px] lg:text-[14px] font-semibold text-slate-600 hover:text-crimson transition-colors px-2 py-1 cursor-pointer"
-            >
-              Log In
-            </button>
-            <button 
-              onClick={onLogin}
-              className="bg-crimson hover:bg-crimson/90 text-white text-[13px] lg:text-[14px] font-semibold px-4 sm:px-5 h-9 sm:h-10 rounded-full transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer flex items-center justify-center shrink-0"
-            >
-              Sign Up
-            </button>
-            {/* Mobile Menu Toggle Button */}
-            <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="md:hidden p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer flex items-center justify-center"
-              aria-label="Toggle navigation menu"
-              aria-expanded={isMobileMenuOpen}
-            >
-              {isMobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
-            </button>
-          </div>
+          {user ? (
+            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+              {/* Credit Balance Badge */}
+              <div 
+                className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-slate-100/90 border border-slate-200/80 text-slate-700 text-xs font-semibold select-none"
+                title="Your available creative credits"
+              >
+                <Coins size={13} className="text-amber-500 shrink-0" />
+                <span>{typeof credits === 'number' ? `${credits} credits` : 'Credits'}</span>
+              </div>
+
+              {/* User Identity */}
+              <div 
+                className="hidden lg:flex items-center gap-1.5 text-xs text-slate-600 font-medium max-w-[150px] truncate select-none" 
+                title={user.email || 'Authenticated User'}
+              >
+                <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                <span className="truncate">{user.displayName || user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'}</span>
+              </div>
+
+              {/* Go to Workspace Button */}
+              <button 
+                onClick={onOpenWorkspace}
+                className="bg-crimson hover:bg-crimson/90 text-white text-[13px] lg:text-[14px] font-semibold px-4 sm:px-5 h-9 sm:h-10 rounded-full transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer flex items-center gap-1.5 shrink-0"
+              >
+                <span>Go to Workspace</span>
+                <ArrowRight size={14} className="shrink-0" />
+              </button>
+
+              {/* Mobile Menu Toggle Button */}
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="md:hidden p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer flex items-center justify-center"
+                aria-label="Toggle navigation menu"
+                aria-expanded={isMobileMenuOpen}
+              >
+                {isMobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 sm:gap-3 lg:gap-4 shrink-0">
+              <button 
+                onClick={onLogin}
+                className="hidden sm:inline-flex text-[13px] lg:text-[14px] font-semibold text-slate-600 hover:text-crimson transition-colors px-2 py-1 cursor-pointer"
+              >
+                Log In
+              </button>
+              <button 
+                onClick={onLogin}
+                className="bg-crimson hover:bg-crimson/90 text-white text-[13px] lg:text-[14px] font-semibold px-4 sm:px-5 h-9 sm:h-10 rounded-full transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer flex items-center justify-center shrink-0"
+              >
+                Sign Up
+              </button>
+              {/* Mobile Menu Toggle Button */}
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="md:hidden p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer flex items-center justify-center"
+                aria-label="Toggle navigation menu"
+                aria-expanded={isMobileMenuOpen}
+              >
+                {isMobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Mobile Dropdown Menu Drawer */}
@@ -166,25 +273,46 @@ export default function LandingPage({ onOpenWorkspace, onLogin, navigateTo }: La
                 <ArrowRight size={15} className="text-slate-400" />
               </a>
               <button
-                onClick={() => { setIsMobileMenuOpen(false); setActiveModal('contact'); }}
+                onClick={() => { setIsMobileMenuOpen(false); openContactModal(); }}
                 className="text-[14px] font-medium text-slate-700 hover:text-crimson py-1 transition-colors text-left flex items-center justify-between"
               >
                 <span>Contact</span>
                 <ArrowRight size={15} className="text-slate-400" />
               </button>
-              <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-                <button
-                  onClick={() => { setIsMobileMenuOpen(false); onLogin(); }}
-                  className="text-[14px] font-semibold text-slate-700 hover:text-crimson py-1"
-                >
-                  Log In
-                </button>
-                <button
-                  onClick={() => { setIsMobileMenuOpen(false); onLogin(); }}
-                  className="bg-crimson text-white text-[13px] font-semibold px-4 py-2 rounded-full"
-                >
-                  Get Started Free
-                </button>
+              <div className="pt-2 border-t border-slate-100 flex flex-col gap-2.5">
+                {user ? (
+                  <>
+                    <div className="flex items-center justify-between px-1 text-xs text-slate-600">
+                      <span className="truncate max-w-[190px] font-medium">{user.email}</span>
+                      <span className="inline-flex items-center gap-1 font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/60">
+                        <Coins size={12} />
+                        {typeof credits === 'number' ? `${credits} credits` : 'Credits'}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => { setIsMobileMenuOpen(false); onOpenWorkspace(); }}
+                      className="w-full bg-crimson hover:bg-crimson/90 text-white text-[13px] font-semibold py-2.5 rounded-full transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+                    >
+                      <span>Go to Workspace</span>
+                      <ArrowRight size={14} />
+                    </button>
+                  </>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <button
+                      onClick={() => { setIsMobileMenuOpen(false); onLogin(); }}
+                      className="text-[14px] font-semibold text-slate-700 hover:text-crimson py-1 cursor-pointer"
+                    >
+                      Log In
+                    </button>
+                    <button
+                      onClick={() => { setIsMobileMenuOpen(false); onLogin(); }}
+                      className="bg-crimson text-white text-[13px] font-semibold px-4 py-2 rounded-full cursor-pointer shadow-sm"
+                    >
+                      Get Started Free
+                    </button>
+                  </div>
+                )}
               </div>
             </motion.div>
           )}
@@ -309,7 +437,7 @@ export default function LandingPage({ onOpenWorkspace, onLogin, navigateTo }: La
             {/* Contact Card */}
             <motion.div 
               whileHover={{ y: -2 }}
-              onClick={() => setActiveModal('contact')}
+              onClick={openContactModal}
               className="bg-white border border-slate-200/70 rounded-2xl p-3.5 sm:p-4 lg:p-4.5 hover:shadow-sm hover:border-slate-300 transition-all duration-200 cursor-pointer flex flex-col justify-between min-h-[96px] sm:h-[106px] lg:h-[112px]"
             >
               <div className="space-y-1">
@@ -371,7 +499,7 @@ export default function LandingPage({ onOpenWorkspace, onLogin, navigateTo }: La
             <button onClick={() => { if (navigateTo) { navigateTo('/legal#privacy'); } else { setLegalTab('privacy'); setActiveModal('legal'); } }} className="hover:text-crimson transition-colors cursor-pointer">Privacy Policy</button>
             <button onClick={() => { if (navigateTo) { navigateTo('/legal#refund'); } else { setLegalTab('refund'); setActiveModal('legal'); } }} className="hover:text-crimson transition-colors cursor-pointer">Refund Policy</button>
             <button onClick={() => { if (navigateTo) { navigateTo('/legal#terms'); } else { setLegalTab('terms'); setActiveModal('legal'); } }} className="hover:text-crimson transition-colors cursor-pointer">Terms of Service</button>
-            <button onClick={() => setActiveModal('contact')} className="hover:text-crimson transition-colors cursor-pointer">Contact</button>
+            <button onClick={openContactModal} className="hover:text-crimson transition-colors cursor-pointer">Contact</button>
           </div>
         </div>
       </footer>
@@ -385,7 +513,7 @@ export default function LandingPage({ onOpenWorkspace, onLogin, navigateTo }: La
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setActiveModal(null)}
+              onClick={closeContactModal}
               className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
             />
 
@@ -406,7 +534,7 @@ export default function LandingPage({ onOpenWorkspace, onLogin, navigateTo }: La
                   {activeModal === 'documentation' && <><Compass className="text-crimson shrink-0" size={18} /> <span>Platform Quickstart</span></>}
                 </h3>
                 <button 
-                  onClick={() => setActiveModal(null)}
+                  onClick={closeContactModal}
                   className="text-slate-400 hover:text-slate-600 p-1.5 hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
                   aria-label="Close dialog"
                 >
@@ -536,26 +664,49 @@ export default function LandingPage({ onOpenWorkspace, onLogin, navigateTo }: La
                 {activeModal === 'contact' && (
                   <form onSubmit={handleContactSubmit} className="space-y-4">
                     {contactSubmitted ? (
-                      <div className="bg-emerald-50 border border-emerald-100 text-emerald-600 p-6 rounded-xl text-center space-y-2">
-                        <Check className="mx-auto w-10 h-10 text-emerald-500 animate-bounce" />
-                        <h4 className="font-bold text-sm">Message Transmitted</h4>
-                        <p className="text-xs text-emerald-500 font-light">An enterprise advisor will reply within 2 hours.</p>
+                      <div className="bg-emerald-50/80 border border-emerald-200 text-emerald-800 p-6 rounded-xl text-center space-y-3">
+                        <CheckCircle2 className="mx-auto w-10 h-10 text-emerald-500" />
+                        <h4 className="font-bold text-base text-slate-900">Message Transmitted Successfully</h4>
+                        <p className="text-xs text-slate-600 font-light max-w-sm mx-auto leading-relaxed">
+                          Thank you! Your custom inquiry has been logged into our enterprise dispatch pipeline. Our onboarding specialists will follow up at <strong className="font-medium text-slate-800">{contactForm.email}</strong>.
+                        </p>
+                        <div className="pt-2">
+                          <button
+                            type="button"
+                            onClick={closeContactModal}
+                            className="px-6 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer shadow-sm"
+                          >
+                            Close
+                          </button>
+                        </div>
                       </div>
                     ) : (
                       <>
-                        <p className="text-slate-500 font-light text-xs">
+                        <p className="text-slate-500 font-light text-xs leading-relaxed">
                           Have specialized pipeline requirements? Complete the form below to reach our dedicated enterprise onboarding desk.
                         </p>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                        {contactError && (
+                          <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg flex items-start gap-2 text-rose-700 text-xs">
+                            <AlertCircle size={15} className="shrink-0 mt-0.5 text-rose-500" />
+                            <span>{contactError}</span>
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                           <div className="space-y-1">
                             <label className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Full Name</label>
                             <input 
                               type="text" 
                               required 
+                              disabled={isSubmittingContact}
                               value={contactForm.name}
-                              onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
+                              onChange={(e) => {
+                                setContactForm({ ...contactForm, name: e.target.value });
+                                if (contactError) setContactError(null);
+                              }}
                               placeholder="Jane Doe" 
-                              className="w-full bg-slate-50 border border-slate-150 focus:border-crimson p-2.5 rounded-lg text-xs outline-none transition-all"
+                              className="w-full bg-slate-50 border border-slate-200 focus:border-crimson focus:bg-white p-2.5 rounded-lg text-xs outline-none transition-all disabled:opacity-50"
                             />
                           </div>
                           <div className="space-y-1">
@@ -563,29 +714,45 @@ export default function LandingPage({ onOpenWorkspace, onLogin, navigateTo }: La
                             <input 
                               type="email" 
                               required 
+                              disabled={isSubmittingContact}
                               value={contactForm.email}
-                              onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
+                              onChange={(e) => {
+                                setContactForm({ ...contactForm, email: e.target.value });
+                                if (contactError) setContactError(null);
+                              }}
                               placeholder="jane@yourcompany.com" 
-                              className="w-full bg-slate-50 border border-slate-150 focus:border-crimson p-2.5 rounded-lg text-xs outline-none transition-all"
+                              className="w-full bg-slate-50 border border-slate-200 focus:border-crimson focus:bg-white p-2.5 rounded-lg text-xs outline-none transition-all disabled:opacity-50"
                             />
                           </div>
                         </div>
                         <div className="space-y-1">
                           <label className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Detailed Requirements</label>
                           <textarea 
-                            rows={4} 
-                            required
+                            rows={3} 
+                            required 
+                            disabled={isSubmittingContact}
                             value={contactForm.message}
-                            onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
+                            onChange={(e) => {
+                              setContactForm({ ...contactForm, message: e.target.value });
+                              if (contactError) setContactError(null);
+                            }}
                             placeholder="Please outline your estimated campaign volume, custom model fine-tuning needs, or API throughput requirements." 
-                            className="w-full bg-slate-50 border border-slate-150 focus:border-crimson p-2.5 rounded-lg text-xs outline-none transition-all resize-none"
+                            className="w-full bg-slate-50 border border-slate-200 focus:border-crimson focus:bg-white p-2.5 rounded-lg text-xs outline-none transition-all resize-none disabled:opacity-50"
                           />
                         </div>
                         <button 
                           type="submit" 
-                          className="w-full bg-crimson hover:bg-crimson/95 text-white font-bold text-xs py-3 rounded-lg uppercase tracking-wider transition-colors cursor-pointer"
+                          disabled={isSubmittingContact}
+                          className="w-full bg-crimson hover:bg-crimson/95 disabled:bg-crimson/60 text-white font-bold text-xs py-3 rounded-lg uppercase tracking-wider transition-colors cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
                         >
-                          Send Message
+                          {isSubmittingContact ? (
+                            <>
+                              <Loader2 size={14} className="animate-spin" />
+                              <span>Sending Message...</span>
+                            </>
+                          ) : (
+                            <span>Send Message</span>
+                          )}
                         </button>
                       </>
                     )}

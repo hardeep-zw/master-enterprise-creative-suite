@@ -70,15 +70,15 @@ export const AppRouter: React.FC<AppRouterProps> = ({
 
     // 3. Authenticated User Guard
     if (user) {
-      // Public pages /pricing and /legal remain fully accessible to authenticated users!
-      if (pathname === '/pricing' || pathname.startsWith('/legal')) {
+      // Public pages /, /pricing and /legal remain fully accessible to authenticated users!
+      if (pathname === '/' || pathname === '/pricing' || pathname.startsWith('/legal')) {
         return;
       }
 
       const destination = getAppDestination(user, brandSetupComplete);
 
-      // A. Visiting landing page ("/") or login ("/login") when authenticated -> Forward into product
-      if (pathname === '/' || pathname === '/login') {
+      // A. Visiting login ("/login") when authenticated -> Forward into product
+      if (pathname === '/login') {
         navigateTo(destination, { replace: true });
         return;
       }
@@ -134,6 +134,8 @@ export const AppRouter: React.FC<AppRouterProps> = ({
         navigateTo={navigateTo}
         onOpenWorkspace={handleEnterProduct}
         onLogin={handleEnterProduct}
+        user={user}
+        credits={credits}
       />
     );
   }
