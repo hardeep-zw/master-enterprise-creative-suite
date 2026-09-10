@@ -11,6 +11,7 @@ export interface AppHeaderProps {
   setView: (view: 'tools' | 'assets' | 'plan' | 'admin' | 'curation' | 'topup') => void;
   isDarkMode: boolean;
   setIsDarkMode: (dark: boolean) => void;
+  currentPath?: string;
 }
 
 export const AppHeader: React.FC<AppHeaderProps> = ({
@@ -20,8 +21,15 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   view,
   setView,
   isDarkMode,
-  setIsDarkMode
+  setIsDarkMode,
+  currentPath
 }) => {
+  const pageTitle = currentPath === '/history/creative'
+    ? 'Creative History'
+    : currentPath === '/history/credits'
+    ? 'Credit History'
+    : selectedGem.name;
+
   return (
     <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-6 shrink-0 relative">
       <div className="flex items-center z-10">
@@ -35,12 +43,12 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
         <motion.div 
-          key={selectedGem.id}
+          key={currentPath?.startsWith('/history/') ? currentPath : selectedGem.id}
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           className="flex items-center gap-2"
         >
-          <h2 className="font-semibold text-slate-800 dark:text-slate-200 text-lg">{selectedGem.name}</h2>
+          <h2 className="font-semibold text-slate-800 dark:text-slate-200 text-lg">{pageTitle}</h2>
         </motion.div>
       </div>
       

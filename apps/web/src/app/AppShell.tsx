@@ -18,6 +18,8 @@ import { useCreditGate } from '@web/features/billing/context/CreditGateContext.j
 import type { Gem } from '@shared-types/creative.js';
 import type { BrandGuidelines } from '@shared-types/brand.js';
 import { type TextWordLayer } from '../features/canvas/hooks/useCanvasEditor.js';
+import { CreativeHistoryPage } from '@web/features/history/pages/CreativeHistoryPage.js';
+import { CreditHistoryPage } from '@web/features/history/pages/CreditHistoryPage.js';
 
 export interface AppShellProps {
   sidebarOpen: boolean;
@@ -59,9 +61,10 @@ export interface AppShellProps {
   setAssets: React.Dispatch<React.SetStateAction<any[]>>;
   saveAsset: (asset: any) => Promise<void>;
   addToHistory: (entry: any) => Promise<void>;
-  navigateTo: (path: string) => void;
+  navigateTo: (path: string, options?: { replace?: boolean }) => void;
   handleLogout: () => Promise<void>;
   generatingGemIds?: string[];
+  currentPath?: string;
   // Creative State & Props
   aspectRatio: string;
   setAspectRatio: (ratio: string) => void;
@@ -315,6 +318,8 @@ export const AppShell: React.FC<AppShellProps> = (props) => {
         }}
         onLogout={handleLogout}
         onLogin={() => navigateTo('/login')}
+        currentPath={props.currentPath}
+        navigateTo={navigateTo}
       />
 
       {/* Main Content */}
@@ -328,10 +333,33 @@ export const AppShell: React.FC<AppShellProps> = (props) => {
           setView={setView}
           isDarkMode={isDarkMode}
           setIsDarkMode={setIsDarkMode}
+          currentPath={props.currentPath}
         />
 
         {/* View Switcher Area */}
-        {view === 'assets' ? (
+        {props.currentPath === '/history/creative' ? (
+          <CreativeHistoryPage
+            history={history}
+            onSelectHistoryItem={(item) => {
+              onSelectHistoryItem(item);
+              navigateTo('/workspace');
+            }}
+            onDeleteHistoryItem={onDeleteHistoryItem}
+            onClearHistory={onClearHistory}
+            onBack={() => navigateTo('/workspace')}
+          />
+        ) : props.currentPath === '/history/credits' ? (
+          <CreditHistoryPage
+            credits={credits}
+            user={user}
+            onLogin={() => navigateTo('/login')}
+            onBack={() => navigateTo('/workspace')}
+            onTopUp={() => {
+              setView('topup');
+              navigateTo('/workspace');
+            }}
+          />
+        ) : view === 'assets' ? (
           <AssetLibrary 
             assets={assets} 
             setAssets={setAssets} 

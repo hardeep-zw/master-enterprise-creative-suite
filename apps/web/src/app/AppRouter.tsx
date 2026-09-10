@@ -89,8 +89,8 @@ export const AppRouter: React.FC<AppRouterProps> = ({
         return;
       }
 
-      // C. Visiting /workspace when brand setup is NOT complete -> Forward to /brand-init
-      if (pathname === '/workspace' && !brandSetupComplete && !isInitialDataLoading) {
+      // C. Visiting /workspace or /history when brand setup is NOT complete -> Forward to /brand-init
+      if ((pathname === '/workspace' || pathname.startsWith('/history/')) && !brandSetupComplete && !isInitialDataLoading) {
         const cached = localStorage.getItem('brandSetupComplete');
         if (cached !== 'true') {
           navigateTo('/brand-init', { replace: true });
@@ -167,3 +167,5 @@ export const AppRouter: React.FC<AppRouterProps> = ({
 
   return <>{children}</>;
 };
+
+export default AppRouter;

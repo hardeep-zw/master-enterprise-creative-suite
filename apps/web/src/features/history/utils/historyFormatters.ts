@@ -13,7 +13,7 @@ import {
   FileText
 } from 'lucide-react';
 import { GENERIC_GEMS } from '@web/infrastructure/ai/modelRegistry.js';
-import type { HistoryItem } from '../AppSidebar.js';
+import type { HistoryItem } from '../../layout/components/AppSidebar.js';
 
 /**
  * Maps gem ID to an appropriate Lucide icon.
@@ -77,21 +77,17 @@ export function getGemName(gemId?: string): string {
  * Eliminates repetitive "Creative Generation" rows by prioritizing substantive prompts.
  */
 export function getCreativeDisplayTitle(item: HistoryItem): string {
-  // 1. If title is set and is NOT the generic fallback "Creative Generation", use it
   if (item.title && item.title.trim() && item.title.trim() !== 'Creative Generation' && item.title.trim() !== 'Creative Output') {
     return item.title.trim();
   }
 
-  // 2. If prompt exists, derive a clean truncated string
   if (item.prompt && item.prompt.trim()) {
     let clean = item.prompt.trim().replace(/^["']|["']$/g, '');
-    // Clean common prompt prefixes
     clean = clean.replace(/^(create|generate|design|write)\s+(an?|the)?\s*/i, '');
     clean = clean.charAt(0).toUpperCase() + clean.slice(1);
     return clean;
   }
 
-  // 3. Fall back to tool name
   return getGemName(item.gemId);
 }
 
@@ -115,13 +111,13 @@ export function formatRelativeTime(timestamp: number | string): string {
 }
 
 /**
- * Formats a timestamp into date and time for ledger rows (e.g., "Sep 10, 04:15").
+ * Formats a timestamp into date and time for ledger rows (e.g., "Sep 10, 2026 · 04:15").
  */
 export function formatLedgerTime(timestamp: string | number): string {
   const date = new Date(timestamp);
   if (isNaN(date.getTime())) return '';
 
-  const dateStr = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  const dateStr = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
   const timeStr = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false });
   return `${dateStr} · ${timeStr}`;
 }

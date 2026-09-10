@@ -31,7 +31,6 @@ import { GENERIC_GEMS } from '@web/infrastructure/ai/modelRegistry.js';
 import type { Gem } from '@shared-types/creative.js';
 import type { BrandGuidelines } from '@shared-types/brand.js';
 import { cn } from '@web/lib/utils.js';
-import { HistorySection } from './history/HistorySection.js';
 
 export interface HistoryItem {
   id: string;
@@ -64,6 +63,8 @@ export interface AppSidebarProps {
   onLogout: () => void;
   onLogin: () => void;
   generatingGemIds?: string[];
+  currentPath?: string;
+  navigateTo?: (path: string, options?: { replace?: boolean }) => void;
 }
 
 export const AppSidebar: React.FC<AppSidebarProps> = ({
@@ -87,7 +88,9 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
   onOpenSettings,
   onLogout,
   onLogin,
-  generatingGemIds = []
+  generatingGemIds = [],
+  currentPath,
+  navigateTo
 }) => {
   const renderGemIcon = (gem: Gem) => {
     if (gem.iconKey) {
@@ -378,17 +381,81 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
           )}
         </div>
 
-        <HistorySection
-          history={history}
-          onSelectHistoryItem={onSelectHistoryItem}
-          onDeleteHistoryItem={onDeleteHistoryItem}
-          onClearHistory={onClearHistory}
-          credits={credits}
-          user={user}
-          onLogin={onLogin}
-          sidebarOpen={sidebarOpen}
-          onExpandSidebar={() => setSidebarOpen(true)}
-        />
+        <div className="pt-8">
+          <div className={cn("text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-4 px-2", !sidebarOpen && "hidden")}>
+            History
+          </div>
+
+          {/* Creative History Navigation Item */}
+          <button
+            onClick={() => {
+              if (navigateTo) {
+                navigateTo('/history/creative');
+              }
+            }}
+            className={cn(
+              "w-full flex items-center gap-3 p-3 rounded-sm transition-all group border mb-2 cursor-pointer",
+              currentPath === '/history/creative'
+                ? "bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 border-rose-100 dark:border-rose-900/60 shadow-sm"
+                : "border-transparent text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white"
+            )}
+            title="Creative History — Your generated creative work"
+          >
+            <div className={cn("shrink-0", currentPath === '/history/creative' ? "text-rose-600 dark:text-rose-400" : "text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300")}>
+              <Sparkles size={20} />
+            </div>
+            {sidebarOpen && (
+              <div className="text-left overflow-hidden flex-1 flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-sm whitespace-nowrap">Creative History</p>
+                  <p className={cn("text-[10px] truncate uppercase tracking-wider", currentPath === '/history/creative' ? "text-rose-400 dark:text-rose-500" : "text-slate-500 dark:text-slate-400")}>
+                    Generated Work
+                  </p>
+                </div>
+                {history.length > 0 && (
+                  <span className="text-[10px] font-mono font-medium px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                    {history.length}
+                  </span>
+                )}
+              </div>
+            )}
+          </button>
+
+          {/* Credit History Navigation Item */}
+          <button
+            onClick={() => {
+              if (navigateTo) {
+                navigateTo('/history/credits');
+              }
+            }}
+            className={cn(
+              "w-full flex items-center gap-3 p-3 rounded-sm transition-all group border cursor-pointer",
+              currentPath === '/history/credits'
+                ? "bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-900/60 shadow-sm"
+                : "border-transparent text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white"
+            )}
+            title="Credit History — Usage & transaction ledger"
+          >
+            <div className={cn("shrink-0", currentPath === '/history/credits' ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300")}>
+              <Coins size={20} />
+            </div>
+            {sidebarOpen && (
+              <div className="text-left overflow-hidden flex-1 flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-sm whitespace-nowrap">Credit History</p>
+                  <p className={cn("text-[10px] truncate uppercase tracking-wider", currentPath === '/history/credits' ? "text-emerald-400 dark:text-emerald-500" : "text-slate-500 dark:text-slate-400")}>
+                    Usage Ledger
+                  </p>
+                </div>
+                {typeof credits === 'number' && (
+                  <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-emerald-500 dark:text-emerald-400">
+                    {credits}
+                  </span>
+                )}
+              </div>
+            )}
+          </button>
+        </div>
       </nav>
 
       <div className="p-4 border-t border-slate-100 dark:border-slate-800 space-y-1">

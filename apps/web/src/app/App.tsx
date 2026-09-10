@@ -499,6 +499,7 @@ export function App() {
         setCredits={setCredits}
       >
         <AppShell 
+          currentPath={currentPath}
           sidebarOpen={sidebarOpen}
           setSidebarOpen={setSidebarOpen}
           brandGuidelines={brandGuidelines}
