@@ -272,7 +272,7 @@ export default function AdminPanel({ onClose, selectedRequestId, onClearSelected
       };
 
       try {
-        await updateHumanTouchRequestStatus(selectedRequest.id, updatePayload as any, selectedRequest.userId);
+        await updateHumanTouchRequestStatus(selectedRequest.id, updatePayload as any);
       } catch (globalErr: any) {
         console.error("Failed step 3: updating humanTouchRequests", globalErr);
         throw new Error(`[Step 3: Human Touch Requests] ${globalErr.message || globalErr}`);
@@ -290,11 +290,11 @@ export default function AdminPanel({ onClose, selectedRequestId, onClearSelected
     }
   };
 
-  const handleUpdateStatus = async (requestId: string, userId: string, newStatus: string) => {
+  const handleUpdateStatus = async (requestId: string, _userId: string, newStatus: string) => {
     setIsUpdatingStatus(true);
     setActionError(null);
     try {
-      await updateHumanTouchRequestStatus(requestId, { status: newStatus } as any, userId);
+      await updateHumanTouchRequestStatus(requestId, { status: newStatus } as any);
     } catch (err: any) {
       console.error("Failed to update status:", err);
       setActionError(`Failed to update status: ${err.message || 'Unknown error'}`);
@@ -303,14 +303,14 @@ export default function AdminPanel({ onClose, selectedRequestId, onClearSelected
     }
   };
 
-  const handleRejectWithReason = async (requestId: string, userId: string, reason: string) => {
+  const handleRejectWithReason = async (requestId: string, _userId: string, reason: string) => {
     setIsUpdatingStatus(true);
     setActionError(null);
     try {
       await updateHumanTouchRequestStatus(requestId, { 
         status: 'rejected',
         completedComment: reason || 'Unable to fulfill request.'
-      } as any, userId);
+      } as any);
     } catch (err: any) {
       console.error("Failed to reject request:", err);
       setActionError(`Failed to update status: ${err.message || 'Unknown error'}`);
@@ -319,13 +319,13 @@ export default function AdminPanel({ onClose, selectedRequestId, onClearSelected
     }
   };
 
-  const handleDeleteRequest = async (requestId: string, userId: string) => {
+  const handleDeleteRequest = async (requestId: string, _userId: string) => {
     if (!confirm("Are you sure you want to delete this human touch request? This cannot be undone.")) return;
     
     setIsUpdatingStatus(true);
     setActionError(null);
     try {
-      await deleteHumanTouchRequest(requestId, userId);
+      await deleteHumanTouchRequest(requestId);
 
       if (selectedRequest?.id === requestId) {
         setSelectedRequest(null);

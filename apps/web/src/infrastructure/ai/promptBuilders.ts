@@ -319,100 +319,76 @@ export async function crawlBrandLogoFromUrl(urlOrDomain: string): Promise<string
 
 export async function initializeBrandKit(
   description: string,
-  context?: { logo?: string; colors?: string; tone?: string }
+  context?: { logo?: string; colors?: string; tone?: string; brandName?: string; industry?: string; location?: string }
 ): Promise<{ guidelines: BrandGuidelines; assets: Asset[] }> {
-  const guidelines = await generateBrandIdentity(description, context);
-  const ai = getAI();
-  const assets: Asset[] = [];
+  // Dynamically import to avoid circular dependency
+  const { extractAndNormalizeSource, extractDomainName } = await import('@web/features/brand-guidelines/lib/sourceNormalizer.js');
+  const { analyzeBrandIntelligence, synthesizeBrandGuidelines, generateFoundationalDocuments } = await import('./brandIntelligenceService.js');
 
-  const discoverLogoTask = async () => {
-    // 1. Manual user uploaded logo
-    if (context?.logo) {
-      guidelines.logo = context.logo;
-      return;
+  const domainMatch = description.match(
+    /(?:https?:\/\/)?(?:www\.)?([a-zA-Z0-9][-a-zA-Z0-9]*(?:\.[a-zA-Z0-9-]+)*\.[a-zA-Z]{2,})/i
+  );
+  const isUrl = Boolean(domainMatch || description.trim().startsWith('http://') || description.trim().startsWith('https://'));
+
+  const parsedColors = context?.colors
+    ? context.colors.split(',').map(c => c.trim()).filter(c => /^#[0-9a-f]{3,6}$/i.test(c))
+    : undefined;
+
+  // 1. Source Extraction & Normalization
+  let normalizedSource;
+  try {
+    normalizedSource = await extractAndNormalizeSource({
+      url: isUrl ? description.trim() : undefined,
+      description: !isUrl ? description.trim() : undefined,
+      userLogo: context?.logo
+    });
+  } catch (err) {
+    console.warn("[initializeBrandKit] Source extraction failed, falling back to raw description source:", err);
+    normalizedSource = {
+      sourceType: 'description' as const,
+      headings: [],
+      keyParagraphs: [description.trim()],
+      navigationItems: [],
+      socialLinks: [],
+      detectedLogoCandidates: context?.logo ? [context.logo] : [],
+      detectedColors: parsedColors || [],
+      rawDescription: description.trim()
+    };
+  }
+
+  // 2. Stage 1: Brand Intelligence Analysis (Facts vs. Inferences)
+  const intelligence = await analyzeBrandIntelligence(normalizedSource, {
+    userContext: {
+      logo: context?.logo,
+      colors: parsedColors,
+      tone: context?.tone,
+      brandName: context?.brandName,
+      industry: context?.industry,
+      location: context?.location
     }
+  });
 
-    // 2. Web Crawl / URL extraction from description or brand domain
-    try {
-      const domainMatch = description.match(
-        /(?:https?:\/\/)?(?:www\.)?([a-zA-Z0-9][-a-zA-Z0-9]*(?:\.[a-zA-Z0-9-]+)*\.[a-zA-Z]{2,})/i
-      );
-      let domain = domainMatch ? domainMatch[1].toLowerCase().replace(/\/.*$/, '').trim() : null;
+  // 3. Stage 2: Canonical Brand Guidelines Synthesis
+  const selectedLogo = context?.logo || normalizedSource.detectedLogoCandidates[0] || undefined;
+  const guidelines = await synthesizeBrandGuidelines(
+    intelligence,
+    {
+      name: context?.brandName || intelligence.facts.name,
+      industry: context?.industry || intelligence.facts.industry,
+      tone: context?.tone || intelligence.messagingSignals.tone,
+      colors: parsedColors,
+      logo: selectedLogo,
+      location: context?.location
+    },
+    selectedLogo
+  );
 
-      if (!domain && guidelines.name) {
-        const cleanName = guidelines.name.toLowerCase().replace(/[^a-z0-9]/g, '');
-        if (cleanName && cleanName !== 'studioai' && cleanName !== 'brand') {
-          domain = `${cleanName}.com`;
-        }
-      }
+  // 4. Stage 3: Foundational Documents Generation (Single Source of Truth)
+  const assets = await generateFoundationalDocuments(guidelines);
 
-      if (domain) {
-        const crawledLogo = await crawlBrandLogoFromUrl(domain);
-        if (crawledLogo) {
-          guidelines.logo = crawledLogo;
-          return;
-        }
-      }
-
-      guidelines.logo = '';
-    } catch (e) {
-      console.error("Failed to crawl brand logo during initialization:", e);
-      guidelines.logo = '';
-    }
-  };
-
-
-  const generateDocsTask = async () => {
-    try {
-      const docPromptsResponse = await withRetry(() =>
-        ai.models.generateContent({
-          model: 'gemini-2.5-flash',
-          contents: `Based on the brand identity for "${guidelines.name}" (${guidelines.industry}), generate 2 essential brand documents.
-        1. A "Brand Manifesto" that captures the soul and mission of the brand.
-        2. A "Market Context & Strategy" document that outlines the brand's position in the current market.
-        
-        FORMATTING: Use clear Markdown hierarchy (# Title, ## Section, ### Subsection).
-        
-        Return a JSON array of 2 objects, each with:
-        - name: The document title (e.g., "Brand Manifesto")
-        - content: The full markdown content of the document.
-        
-        Return ONLY the JSON array.`,
-          config: {
-            responseMimeType: "application/json",
-            responseSchema: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  name: { type: Type.STRING },
-                  content: { type: Type.STRING }
-                },
-                required: ["name", "content"]
-              }
-            }
-          }
-        })
-      );
-
-      const docPrompts = parseJSON(docPromptsResponse.text);
-      docPrompts.forEach((dp: any) => {
-        assets.push({
-          id: Math.random().toString(36).substring(7),
-          name: `${dp.name}.md`,
-          data: dp.content,
-          type: 'doc',
-          selected: false
-        });
-      });
-    } catch (e) {
-      console.error("Failed to generate brand setup documents:", e);
-    }
-  };
-
-  await Promise.all([discoverLogoTask(), generateDocsTask()]);
   return { guidelines, assets };
 }
+
 
 export interface GenerateBrandLogoOptions {
   name: string;
