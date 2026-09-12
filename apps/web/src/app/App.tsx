@@ -34,9 +34,25 @@ import { safeGetItem, safeSetItem, sanitizeHistory } from '../lib/storage.js';
 import { normalizePath } from '../lib/navigation.js';
 
 export function App() {
-  const { user, loading, logout, login, loginWithEmail, registerWithEmail } = useAuth();
+  const {
+    user,
+    loading,
+    logout,
+    login,
+    loginWithEmail,
+    registerWithEmail,
+    unconfirmedEmail,
+    setUnconfirmedEmail,
+    checkVerification,
+    resendVerification,
+    resetPassword,
+    updatePassword,
+  } = useAuth();
   
-  const [currentPath, setCurrentPath] = useState(() => normalizePath(window.location.pathname).pathname);
+  const [currentPath, setCurrentPath] = useState(() => {
+    if (typeof window === 'undefined') return '/';
+    return normalizePath(window.location.pathname + window.location.search + window.location.hash).pathname;
+  });
   const [authError, setAuthError] = useState<string | null>(null);
 
   // Core App State
@@ -223,7 +239,11 @@ export function App() {
       }
     };
     window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+    window.addEventListener('hashchange', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('hashchange', handlePopState);
+    };
   }, []);
 
   // Sync Preferences to LocalStorage safely with quota protection
@@ -236,7 +256,7 @@ export function App() {
 
   // Real-time Subscriptions to Cloud Repositories when User is Authenticated
   useEffect(() => {
-    if (!user?.uid) {
+    if (!user?.uid || user.emailConfirmed === false) {
       isInitialDataLoadedRef.current = false;
       setIsInitialDataLoading(false);
       return;
@@ -348,7 +368,7 @@ export function App() {
       unsubUserQueue();
       unsubAdminQueue();
     };
-  }, [user?.uid]);
+  }, [user?.uid, user?.emailConfirmed]);
 
   // History Actions
   const handleSelectGem = (gem: Gem) => {
@@ -668,9 +688,15 @@ export function App() {
       setCredits={setCredits}
       authError={authError}
       setAuthError={setAuthError}
+      unconfirmedEmail={unconfirmedEmail}
+      setUnconfirmedEmail={setUnconfirmedEmail}
       login={login}
       loginWithEmail={loginWithEmail}
       registerWithEmail={registerWithEmail}
+      checkVerification={checkVerification}
+      resendVerification={resendVerification}
+      resetPassword={resetPassword}
+      updatePassword={updatePassword}
       handleLogout={handleLogout}
       handleBrandSetupComplete={handleBrandSetupComplete}
     >

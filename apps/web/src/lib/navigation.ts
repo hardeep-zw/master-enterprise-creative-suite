@@ -5,11 +5,14 @@
  * when an "enter the product" action is triggered (e.g. Platform, Open Workspace, Log In/Sign Up when already authenticated).
  *
  * STATE 1: Unauthenticated -> '/login'
- * STATE 2: Authenticated + brand setup incomplete -> '/brand-init'
- * STATE 3: Authenticated + brand setup complete -> '/workspace'
+ * STATE 2: Authenticated but Unverified -> '/verify-email'
+ * STATE 3: Authenticated + Verified + brand setup incomplete -> '/brand-init'
+ * STATE 4: Authenticated + Verified + brand setup complete -> '/workspace'
  */
 export const getAppDestination = (user: any, brandSetupComplete: boolean): string => {
   if (!user) return '/login';
+  // Strict security boundary: Email verification is required before product entry
+  if (user.emailConfirmed === false) return '/verify-email';
   if (!brandSetupComplete) return '/brand-init';
   return '/workspace';
 };
@@ -47,7 +50,10 @@ export const isPublicRoute = (pathname: string): boolean => {
   return (
     clean === '/' ||
     clean === '/login' ||
+    clean === '/verify-email' ||
+    clean === '/auth/callback' ||
     clean === '/pricing' ||
     clean.startsWith('/legal')
   );
 };
+

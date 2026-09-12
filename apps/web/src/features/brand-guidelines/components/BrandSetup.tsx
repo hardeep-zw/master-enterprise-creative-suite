@@ -46,8 +46,9 @@ export interface BrandSetupProps {
   user: any;
   loading: boolean;
   login: () => void;
-  loginWithEmail: (email: string, password: string) => Promise<void>;
-  registerWithEmail: (email: string, password: string, displayName?: string) => Promise<void>;
+  loginWithEmail: (email: string, password: string) => Promise<any>;
+  registerWithEmail: (email: string, password: string, displayName?: string) => Promise<any>;
+  resetPassword?: (email: string) => Promise<{ error?: string }>;
   logout: () => void;
   authError?: string | null;
   setAuthError: (err: string | null) => void;
@@ -64,6 +65,7 @@ export const BrandSetup: React.FC<BrandSetupProps> = ({
   login,
   loginWithEmail,
   registerWithEmail,
+  resetPassword,
   logout,
   authError,
   setAuthError,
@@ -788,8 +790,10 @@ export const BrandSetup: React.FC<BrandSetupProps> = ({
                     login={login}
                     loginWithEmail={loginWithEmail}
                     registerWithEmail={registerWithEmail}
+                    resetPassword={resetPassword}
                     authError={authError}
                     setAuthError={setAuthError}
+                    navigateTo={navigateTo}
                     titleText="Verify Credentials"
                     subText=""
                   />
@@ -823,9 +827,10 @@ export const BrandSetup: React.FC<BrandSetupProps> = ({
         )}
 
         {/* ====================================================
-            STAGE 1: PRIMARY INPUT SCREEN (Brand Consultancy Feel)
+            STAGE 0: AUTH-FIRST GATE (Sign In / Sign Up)
+            When user is NOT authenticated, show login screen
            ==================================================== */}
-        {step === 'input' && (
+        {step === 'input' && !user && (
           <div className="w-full h-full flex">
             {/* Left Side - Brand Strategy Consultancy Banner */}
             <div className="hidden lg:flex lg:w-1/2 relative bg-slate-950 overflow-hidden items-end p-16 border-r border-slate-850">
@@ -835,9 +840,70 @@ export const BrandSetup: React.FC<BrandSetupProps> = ({
               </div>
 
               <div className="relative z-10 max-w-lg space-y-4">
-                <span className="text-xs font-mono font-bold uppercase tracking-widest text-rose-500 block">
-                  Writopedia Strategic Engine
-                </span>
+                <h1 className="text-4xl font-light text-white tracking-tight leading-tight">
+                  Enterprise <br />
+                  <span className="font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-rose-400 via-rose-500 to-rose-300">
+                    Creative Suite
+                  </span>
+                </h1>
+                <p className="text-sm text-slate-400 font-light leading-relaxed">
+                  Powered by advanced creative intelligence. Define your brand's strategic parameters to unlock tailored, high-impact campaigns and visual assets.
+                </p>
+              </div>
+            </div>
+
+            {/* Right Side - Auth Form */}
+            <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-10 lg:p-16 overflow-y-auto">
+              <motion.div
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="w-full max-w-md space-y-6"
+              >
+                {/* Header */}
+                <div className="space-y-3">
+                  <div className="relative inline-block pb-1">
+                    <h2 className="text-3xl font-bold text-white tracking-tight">
+                      Access Your Workspace
+                    </h2>
+                    <div className="absolute bottom-0 left-0 w-12 h-0.5 bg-rose-600" />
+                  </div>
+                  <p className="text-slate-400 font-light text-sm">
+                    Please sign in or create an account to begin customizing your brand experience.
+                  </p>
+                </div>
+
+                {/* Auth Box */}
+                <AuthBox
+                  user={user}
+                  login={login}
+                  loginWithEmail={loginWithEmail}
+                  registerWithEmail={registerWithEmail}
+                  resetPassword={resetPassword}
+                  authError={authError}
+                  setAuthError={setAuthError}
+                  navigateTo={navigateTo}
+                  titleText="Verify Your Credentials"
+                  subText=""
+                />
+              </motion.div>
+            </div>
+          </div>
+        )}
+
+        {/* ====================================================
+            STAGE 1: PRIMARY INPUT SCREEN (Brand Consultancy Feel)
+            Only shown when user IS authenticated
+           ==================================================== */}
+        {step === 'input' && user && (
+          <div className="w-full h-full flex">
+            {/* Left Side - Brand Strategy Consultancy Banner */}
+            <div className="hidden lg:flex lg:w-1/2 relative bg-slate-950 overflow-hidden items-end p-16 border-r border-slate-850">
+              <div className="absolute inset-0">
+                <div className="absolute inset-0 bg-gradient-to-t from-[#090d16] via-slate-950/90 to-transparent" />
+                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-rose-600/10 rounded-full blur-3xl" />
+              </div>
+
+              <div className="relative z-10 max-w-lg space-y-4">
                 <h1 className="text-4xl font-light text-white tracking-tight leading-tight">
                   Brand Intelligence <br />
                   <span className="font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-rose-400 via-rose-500 to-rose-300">
@@ -869,22 +935,20 @@ export const BrandSetup: React.FC<BrandSetupProps> = ({
                     Tell Writopedia where your brand lives. We will analyze your public presence to establish your creative parameters.
                   </p>
 
-                  {user && (
-                    <div className="pt-2 flex items-center justify-between border-b border-slate-800 pb-3">
-                      <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-medium">
-                        <Cloud size={14} className="shrink-0" />
-                        <span className="truncate">Active session: {user.email}</span>
-                      </div>
-                      <button
-                        onClick={logout}
-                        type="button"
-                        className="text-[10px] bg-slate-900 hover:bg-slate-800 border border-slate-750 px-2 py-1 rounded-sm uppercase tracking-wider font-bold text-slate-300 hover:text-white transition-colors flex items-center gap-1 cursor-pointer"
-                        title="Sign out of current profile"
-                      >
-                        <LogOut size={11} /> Sign Out
-                      </button>
+                  <div className="pt-2 flex items-center justify-between border-b border-slate-800 pb-3">
+                    <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-medium">
+                      <Cloud size={14} className="shrink-0" />
+                      <span className="truncate">Active session: {user.email}</span>
                     </div>
-                  )}
+                    <button
+                      onClick={logout}
+                      type="button"
+                      className="text-[10px] bg-slate-900 hover:bg-slate-800 border border-slate-750 px-2 py-1 rounded-sm uppercase tracking-wider font-bold text-slate-300 hover:text-white transition-colors flex items-center gap-1 cursor-pointer"
+                      title="Sign out of current profile"
+                    >
+                      <LogOut size={11} /> Sign Out
+                    </button>
+                  </div>
                 </div>
 
                 {error && (

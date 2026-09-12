@@ -17,8 +17,8 @@ export function subscribeBrandGuidelines(
 
   apiClient.get<{ success: boolean; guidelines: BrandGuidelines | null }>('/api/brand-guidelines')
     .then((res) => {
-      if (!isCancelled && res?.guidelines) {
-        onData(res.guidelines);
+      if (!isCancelled) {
+        onData(res?.guidelines || null);
       }
     })
     .catch((err) => {
