@@ -96,6 +96,7 @@ Writopedia Platform
 | **SSRF Multi-IP Protection** | Outbound proxy resolves all DNS records (`all: true`), blocks loopback/private/link-local/metadata/CGNAT ranges, and manually checks redirects. |
 | **Default-Deny Authentication** | Server middleware enforces bearer token authentication across all `/api/*` routes; only explicitly allowlisted public routes (e.g. `/api/payment/webhook`) bypass it. |
 | **Architectural Boundaries** | `npm run check:boundaries` enforces strict import directions: UI components cannot import server code or databases directly. |
+| **Zero Leaked Secrets & Credentials** | Strict `.gitignore` rules, GitGuardian repository scanning, and boundary linting (`npm run check:boundaries`) enforce zero plaintext passwords, API tokens, or secrets across git history and repository scripts. |
 
 ---
 
@@ -165,12 +166,27 @@ VITE_SUPABASE_URL=https://<project-ref>.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
 
 # =========================================================
+# Platform Administrator Setup (Optional / Initial Seed)
+# =========================================================
+ADMIN_EMAIL=writopedia.platform@gmail.com
+ADMIN_PASSWORD=your_secure_admin_password_here
+ADMIN_NAME="Writopedia Platform Admin"
+
+# =========================================================
 # Optional: ngrok Tunneling Token
 # =========================================================
 NGROK_AUTHTOKEN=your_ngrok_token...
 ```
 
-### 4. Run Development Server
+### 4. (Optional) Initialize Platform Administrator Account
+To seed the initial administrative user, profile, and admin workspace credits:
+```bash
+node scripts/setup_admin_user.cjs
+# Or pass password directly via argument:
+# node scripts/setup_admin_user.cjs <secure_password>
+```
+
+### 5. Run Development Server
 ```bash
 npm run dev
 ```

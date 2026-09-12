@@ -1,11 +1,74 @@
-node_modules/
-build/
-dist/
-coverage/
-.DS_Store
-*.log
-.env*
+# ==============================================================================
+# Enterprise Creative Suite - Git Ignore Configuration
+# Hardened against credential leaks, secret exposure, build artifacts, and OS files
+# ==============================================================================
+
+# 1. Environment & Secrets (STRICT - GitGuardian / Security Compliance)
+.env
+.env.*
 !.env.example
+*.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Private keys, certificates, and credentials
+*.pem
+*.key
+*.cert
+*.crt
+*.pfx
+*.p12
+*.pkcs12
+id_rsa*
+credentials.json
+service-account*.json
+*secret*.json
+*.keystore
+
+# 2. Dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# 3. Production Builds, Bundles, and Caches
+dist/
+build/
+out/
+coverage/
+.turbo/
+.cache/
+*.tsbuildinfo
+temp/
+tmp/
+
+# 4. Logs, Dumps, and Runtime Diagnostics
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.sql.bak
+*.dump
+
+# 5. Operating System Artifacts
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# 6. IDEs and Editors
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+
+# 7. Local Agent Memory & Scratch Workspaces
 agent/
 scratch/
-.vscode/
