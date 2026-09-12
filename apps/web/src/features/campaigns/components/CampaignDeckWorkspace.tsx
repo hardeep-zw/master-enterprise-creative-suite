@@ -68,6 +68,7 @@ interface CampaignDeckWorkspaceProps {
   onSaveHistory: (res: any, gemId: string, prompt: string) => void;
   currentActiveResult?: any;
   onClearActiveResult?: () => void;
+  setHumanTouchItem?: (item: any) => void;
 }
 
 export function CampaignDeckWorkspace({
@@ -79,7 +80,8 @@ export function CampaignDeckWorkspace({
   onSaveCampaignAsset,
   onSaveHistory,
   currentActiveResult,
-  onClearActiveResult
+  onClearActiveResult,
+  setHumanTouchItem: setHumanTouchItemProp
 }: CampaignDeckWorkspaceProps) {
   
   // Local state properties
@@ -196,7 +198,13 @@ export function CampaignDeckWorkspace({
 
   // Track key saves locally
   useEffect(() => {
-    localStorage.setItem('FAL_API_KEY', customFalKey);
+    try {
+      if (customFalKey) {
+        localStorage.setItem('FAL_API_KEY', customFalKey);
+      } else {
+        localStorage.removeItem('FAL_API_KEY');
+      }
+    } catch {}
   }, [customFalKey]);
 
   // Handle incoming active campaign loads from past history
@@ -1047,15 +1055,20 @@ export function CampaignDeckWorkspace({
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              setHumanTouchItem({
+                              const payload = {
                                 title: item.title,
                                 prompt: item.prompt,
                                 imageUrl: item.imageUrl,
                                 role: role,
                                 modelsUsed: item.warning ? 'Flux Fallback' : 'openai/gpt-image-2'
-                              });
-                              setHumanTouchComment('');
-                              setHumanTouchSuccessMsg(null);
+                              };
+                              if (setHumanTouchItemProp) {
+                                setHumanTouchItemProp(payload);
+                              } else {
+                                setHumanTouchItem(payload);
+                                setHumanTouchComment('');
+                                setHumanTouchSuccessMsg(null);
+                              }
                             }}
                             className="text-slate-600 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 font-bold uppercase tracking-wider cursor-pointer flex items-center gap-0.5"
                           >
@@ -1191,7 +1204,7 @@ export function CampaignDeckWorkspace({
       )}
 
       {/* Modal / Dialog for Writopedia Human Touch last-mile professional review */}
-      {humanTouchItem && (
+      {humanTouchItem && !setHumanTouchItemProp && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-in fade-in">
           <div className="bg-white dark:bg-slate-900 max-w-xl w-full border border-slate-200 dark:border-slate-800 rounded-sm shadow-2xl relative overflow-hidden flex flex-col">
             

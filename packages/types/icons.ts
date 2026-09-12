@@ -49,7 +49,8 @@ export type AppActionIconKey =
   | 'action-delete'
   | 'action-close'
   | 'action-add'
-  | 'source-grounding';
+  | 'source-grounding'
+  | 'sparkles';
 
 export type AppSystemIconKey =
   | 'filter-all'

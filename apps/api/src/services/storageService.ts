@@ -77,6 +77,38 @@ export class StorageService {
   }
 
   /**
+   * Generates ephemeral signed URLs for multiple private bucket assets in a single batch call.
+   */
+  async getSignedUrls(storagePaths: string[], expiresIn = 86400): Promise<Map<string, string>> {
+    const urlMap = new Map<string, string>();
+    if (!storagePaths || storagePaths.length === 0) return urlMap;
+
+    const supabase = getSupabaseAdmin();
+    if (!supabase) return urlMap;
+
+    try {
+      const { data, error } = await supabase.storage
+        .from(this.bucketName)
+        .createSignedUrls(storagePaths, expiresIn);
+
+      if (error || !data) {
+        console.error("StorageService.getSignedUrls error:", error);
+        return urlMap;
+      }
+
+      for (const item of data) {
+        if (item.signedUrl && !item.error) {
+          urlMap.set(item.path, item.signedUrl);
+        }
+      }
+    } catch (e) {
+      console.error("StorageService.getSignedUrls exception:", e);
+    }
+
+    return urlMap;
+  }
+
+  /**
    * Creates a signed upload URL for direct browser uploads.
    */
   async createSignedUploadUrl(

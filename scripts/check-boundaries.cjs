@@ -85,9 +85,20 @@ packageFiles.forEach(file => {
   }
 });
 
+// 4. Secret Invariant Enforcement across all scripts
+const scriptFiles = walk(path.join(ROOT, 'scripts'));
+scriptFiles.forEach(file => {
+  const content = fs.readFileSync(file, 'utf8');
+
+  // Rule: Scripts cannot contain hardcoded passwords
+  if (/(?:const|let|var)\s+password\s*=\s*['"][^'"]{3,}['"]/i.test(content)) {
+    reportViolation(file, 'Scripts cannot contain hardcoded passwords. Credentials must be read from environment variables or command arguments.');
+  }
+});
+
 if (violations > 0) {
   console.error(`\n🚨 Architecture boundary check FAILED with ${violations} violation(s).`);
   process.exit(1);
 } else {
-  console.log(`\n✅ Architecture boundary check PASSED. All ${webFiles.length + apiFiles.length + packageFiles.length} files conform to architectural isolation rules.`);
+  console.log(`\n✅ Architecture boundary check PASSED. All ${webFiles.length + apiFiles.length + packageFiles.length + scriptFiles.length} files conform to architectural isolation & secret safety rules.`);
 }

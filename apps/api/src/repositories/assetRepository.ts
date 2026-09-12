@@ -22,6 +22,7 @@ export interface CreateAssetInput {
 
 export interface AssetRecord extends CreateAssetInput {
   id: string;
+  signedUrl?: string;
   createdAt: string;
   updatedAt: string;
 }

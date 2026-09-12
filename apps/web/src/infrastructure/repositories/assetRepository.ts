@@ -20,7 +20,9 @@ export function subscribeUserAssets(
         const loaded: Asset[] = res.assets.map((d) => ({
           id: d.id,
           name: d.name || 'Untitled Asset',
-          data: d.storagePath || '',
+          data: d.signedUrl || d.storagePath || '',
+          storagePath: d.storagePath,
+          signedUrl: d.signedUrl,
           type: d.type || 'image',
           selected: false,
           analysis: d.analysis
@@ -36,6 +38,19 @@ export function subscribeUserAssets(
   return () => {
     isCancelled = true;
   };
+}
+
+/**
+ * Refreshes an ephemeral signed download URL for a specific asset if expired.
+ */
+export async function refreshAssetSignedUrl(assetId: string): Promise<string | null> {
+  try {
+    const res = await apiClient.get<{ success: boolean; signedUrl?: string }>(`/api/assets/${assetId}/signed-url`);
+    return res?.signedUrl || null;
+  } catch (err) {
+    console.warn(`[AssetRepository] Failed to refresh signed URL for asset ${assetId}:`, err);
+    return null;
+  }
 }
 
 export async function saveUserAsset(

@@ -20,6 +20,7 @@ export async function submitSalesInquiry(
     });
   } catch (err) {
     console.warn('[SalesRepository] API submit error:', err);
+    throw err;
   }
 }
 

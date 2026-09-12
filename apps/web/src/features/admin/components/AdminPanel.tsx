@@ -80,7 +80,7 @@ export default function AdminPanel({ onClose, selectedRequestId, onClearSelected
 
   const [requests, setRequests] = useState<GlobalHumanTouchRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'under-review' | 'completed' | 'rejected'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'in_review' | 'completed' | 'rejected'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRequest, setSelectedRequest] = useState<GlobalHumanTouchRequest | null>(null);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
@@ -146,7 +146,7 @@ export default function AdminPanel({ onClose, selectedRequestId, onClearSelected
     }, (error) => {
       console.error("Failed to fetch administrative queue:", error);
       setLoading(false);
-    });
+    }, { scope: 'all' });
 
     return unsubscribe;
   }, [selectedRequestId]);
@@ -272,7 +272,7 @@ export default function AdminPanel({ onClose, selectedRequestId, onClearSelected
       };
 
       try {
-        await updateHumanTouchRequestStatus(selectedRequest.id, updatePayload as any, selectedRequest.userId);
+        await updateHumanTouchRequestStatus(selectedRequest.id, updatePayload as any);
       } catch (globalErr: any) {
         console.error("Failed step 3: updating humanTouchRequests", globalErr);
         throw new Error(`[Step 3: Human Touch Requests] ${globalErr.message || globalErr}`);
@@ -290,11 +290,11 @@ export default function AdminPanel({ onClose, selectedRequestId, onClearSelected
     }
   };
 
-  const handleUpdateStatus = async (requestId: string, userId: string, newStatus: string) => {
+  const handleUpdateStatus = async (requestId: string, _userId: string, newStatus: string) => {
     setIsUpdatingStatus(true);
     setActionError(null);
     try {
-      await updateHumanTouchRequestStatus(requestId, { status: newStatus } as any, userId);
+      await updateHumanTouchRequestStatus(requestId, { status: newStatus } as any);
     } catch (err: any) {
       console.error("Failed to update status:", err);
       setActionError(`Failed to update status: ${err.message || 'Unknown error'}`);
@@ -303,13 +303,29 @@ export default function AdminPanel({ onClose, selectedRequestId, onClearSelected
     }
   };
 
-  const handleDeleteRequest = async (requestId: string, userId: string) => {
+  const handleRejectWithReason = async (requestId: string, _userId: string, reason: string) => {
+    setIsUpdatingStatus(true);
+    setActionError(null);
+    try {
+      await updateHumanTouchRequestStatus(requestId, { 
+        status: 'rejected',
+        completedComment: reason || 'Unable to fulfill request.'
+      } as any);
+    } catch (err: any) {
+      console.error("Failed to reject request:", err);
+      setActionError(`Failed to update status: ${err.message || 'Unknown error'}`);
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
+  const handleDeleteRequest = async (requestId: string, _userId: string) => {
     if (!confirm("Are you sure you want to delete this human touch request? This cannot be undone.")) return;
     
     setIsUpdatingStatus(true);
     setActionError(null);
     try {
-      await deleteHumanTouchRequest(requestId, userId);
+      await deleteHumanTouchRequest(requestId);
 
       if (selectedRequest?.id === requestId) {
         setSelectedRequest(null);
@@ -324,7 +340,8 @@ export default function AdminPanel({ onClose, selectedRequestId, onClearSelected
   };
 
   const filteredRequests = requests.filter(req => {
-    const matchesStatus = statusFilter === 'all' || req.status === statusFilter;
+    const normalizedReqStatus = req.status === 'under-review' ? 'in_review' : req.status;
+    const matchesStatus = statusFilter === 'all' || normalizedReqStatus === statusFilter;
     const matchesQuery = searchQuery.trim() === '' || 
       req.userEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
       req.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -373,20 +390,21 @@ export default function AdminPanel({ onClose, selectedRequestId, onClearSelected
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400">
             <XCircle size={12} />
-            Rejected
+            Unable to Fulfill
           </span>
         );
+      case 'in_review':
       case 'under-review':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400">
-            <AlertCircle size={12} />
-            Under Review
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full bg-sky-500/10 border border-sky-500/20 text-sky-600 dark:text-sky-400">
+            <Clock size={12} />
+            In Review
           </span>
         );
       case 'pending':
       default:
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400">
             <Clock size={12} />
             Pending
           </span>
@@ -467,17 +485,17 @@ export default function AdminPanel({ onClose, selectedRequestId, onClearSelected
 
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-[10px] text-slate-400 uppercase tracking-wider font-mono mr-1">Filter:</span>
-              {(['all', 'pending', 'under-review', 'completed', 'rejected'] as const).map((status) => (
+              {(['all', 'pending', 'in_review', 'completed', 'rejected'] as const).map((status) => (
                 <button
                   key={status}
                   onClick={() => setStatusFilter(status)}
-                  className={`px-2.5 py-1 text-[10px] font-bold rounded-sm border uppercase tracking-wider transition-all shadow-2xs ${
+                  className={`px-2.5 py-1 text-[10px] font-bold rounded-sm border uppercase tracking-wider transition-all shadow-2xs cursor-pointer ${
                     statusFilter === status 
                       ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-slate-900 dark:border-white shadow-xs' 
                       : 'bg-white dark:bg-slate-950 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
                   }`}
                 >
-                  {status === 'all' ? 'All Queue' : status.replace('-', ' ')}
+                  {status === 'all' ? 'All Queue' : status === 'in_review' ? 'In Review' : status === 'rejected' ? 'Unable to Fulfill' : status}
                 </button>
               ))}
             </div>
@@ -656,46 +674,48 @@ export default function AdminPanel({ onClose, selectedRequestId, onClearSelected
 
                   {/* Administrative Operation Trigger Deck */}
                   <div className="space-y-2">
-                    <p className="text-[10px] font-mono uppercase tracking-widest text-slate-400">Review Action Desk</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                      <button
-                        onClick={() => handleUpdateStatus(selectedRequest.id, selectedRequest.userId, 'under-review')}
-                        disabled={isUpdatingStatus || selectedRequest.status === 'under-review'}
-                        className={`flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-bold rounded-sm border uppercase tracking-wider transition-colors font-mono ${
-                          selectedRequest.status === 'under-review'
-                            ? 'bg-amber-500/10 border-amber-500/20 text-amber-500'
-                            : 'bg-white hover:bg-slate-50 border-slate-200 dark:bg-slate-950 dark:border-slate-800 text-slate-700 dark:text-slate-300 dark:hover:bg-slate-900'
-                        }`}
-                      >
-                        <Clock size={14} />
-                        Under Review
-                      </button>
+                    <p className="text-[10px] font-mono uppercase tracking-widest text-slate-400 font-bold">Review Action Desk</p>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedRequest.status === 'pending' && (
+                        <button
+                          onClick={() => handleUpdateStatus(selectedRequest.id, selectedRequest.userId, 'in_review')}
+                          disabled={isUpdatingStatus}
+                          className="flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-bold rounded-sm border uppercase tracking-wider transition-colors font-mono bg-sky-500/10 border-sky-500/30 text-sky-400 hover:bg-sky-500/20 cursor-pointer shadow-xs disabled:opacity-50"
+                        >
+                          <Clock size={14} />
+                          Start Review (Move to In Review)
+                        </button>
+                      )}
 
-                      <button
-                        onClick={() => handleUpdateStatus(selectedRequest.id, selectedRequest.userId, 'completed')}
-                        disabled={isUpdatingStatus || selectedRequest.status === 'completed'}
-                        className={`flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-bold rounded-sm border uppercase tracking-wider transition-colors font-mono ${
-                          selectedRequest.status === 'completed'
-                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500'
-                            : 'bg-white hover:bg-slate-50 border-slate-200 dark:bg-slate-950 dark:border-slate-800 text-slate-700 dark:text-slate-300 dark:hover:bg-slate-900'
-                        }`}
-                      >
-                        <CheckCircle size={14} />
-                        Complete
-                      </button>
+                      {(selectedRequest.status === 'in_review' || selectedRequest.status === 'under-review') && (
+                        <div className="flex items-center gap-2 py-1.5 px-3 bg-sky-950/40 border border-sky-800/40 rounded-sm text-xs font-mono text-sky-300">
+                          <Clock size={13} className="animate-spin text-sky-400" />
+                          <span>Review in progress — Upload deliverable below to complete</span>
+                        </div>
+                      )}
 
-                      <button
-                        onClick={() => handleUpdateStatus(selectedRequest.id, selectedRequest.userId, 'rejected')}
-                        disabled={isUpdatingStatus || selectedRequest.status === 'rejected'}
-                        className={`flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-bold rounded-sm border uppercase tracking-wider transition-colors font-mono ${
-                          selectedRequest.status === 'rejected'
-                            ? 'bg-rose-500/10 border-rose-500/20 text-rose-500'
-                            : 'bg-white hover:bg-slate-50 border-slate-200 dark:bg-slate-950 dark:border-slate-800 text-slate-700 dark:text-slate-300 dark:hover:bg-slate-900'
-                        }`}
-                      >
-                        <XCircle size={14} />
-                        Reject
-                      </button>
+                      {(selectedRequest.status === 'pending' || selectedRequest.status === 'in_review' || selectedRequest.status === 'under-review') && (
+                        <button
+                          onClick={() => {
+                            const reason = window.prompt("Enter client feedback / reason for inability to fulfill:", "Creative requirements cannot be fulfilled with current assets.");
+                            if (reason !== null && reason.trim()) {
+                              handleRejectWithReason(selectedRequest.id, selectedRequest.userId, reason.trim());
+                            }
+                          }}
+                          disabled={isUpdatingStatus}
+                          className="flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-bold rounded-sm border uppercase tracking-wider transition-colors font-mono bg-white dark:bg-slate-950 hover:bg-rose-500/10 border-slate-200 dark:border-slate-800 text-rose-500 cursor-pointer shadow-xs disabled:opacity-50"
+                        >
+                          <XCircle size={14} />
+                          Unable to Fulfill (Decline)
+                        </button>
+                      )}
+
+                      {selectedRequest.status === 'completed' && (
+                        <div className="flex items-center gap-2 py-1.5 px-3 bg-emerald-950/40 border border-emerald-800/40 rounded-sm text-xs font-mono text-emerald-400">
+                          <CheckCircle size={13} />
+                          <span>Deliverable fulfilled & released</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 

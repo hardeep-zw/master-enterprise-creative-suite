@@ -153,6 +153,7 @@ export const APP_ICON_REGISTRY: Record<AppIconKey, React.FC<LucideProps>> = {
   'action-close': X,
   'action-add': Plus,
   'source-grounding': Globe2,
+  'sparkles': Sparkles,
 
   // Area 5: System, Filters & Badges
   'filter-all': LayoutGrid,

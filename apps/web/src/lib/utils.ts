@@ -14,6 +14,23 @@ export async function downloadFile(url: string, filename: string) {
   // Ensure we have a reasonable filename
   let finalFilename = filename || 'download';
   
+  // Early check for raw markdown / document content
+  if (url.startsWith('#') || (!url.startsWith('http:') && !url.startsWith('https:') && !url.startsWith('data:') && !url.startsWith('blob:'))) {
+    if (!finalFilename.toLowerCase().endsWith('.md') && !finalFilename.toLowerCase().endsWith('.txt')) {
+      finalFilename += '.md';
+    }
+    const blob = new Blob([url], { type: 'text/markdown;charset=utf-8' });
+    const blobUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = finalFilename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(blobUrl);
+    return;
+  }
+
   // Early check for blob/data URLs
   if (url.startsWith('data:') || url.startsWith('blob:')) {
     // Basic extension fix for local blob/data URLs if they are missing

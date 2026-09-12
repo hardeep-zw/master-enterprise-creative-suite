@@ -47,7 +47,7 @@ const loadRazorpayScript = () => {
 };
 
 export const EnterprisePlan: React.FC<EnterprisePlanProps> = ({ credits = 50, setCredits, user, onLogin }) => {
-  const isAdmin = user && (user.email === 'hardeep.pathak@gmail.com' || user.email === 'avdhesh.babaria@gmail.com');
+  const isAdmin = user && (user.admin || user.email === 'writopedia.platform@gmail.com' || user.email === 'hardeep.pathak@gmail.com' || user.email === 'avdhesh.babaria@gmail.com' || user.email === 'business@writopedia.com');
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annually'>('monthly');
   const [currency, setCurrency] = useState<'INR' | 'USD'>('USD');
   const [currencySource, setCurrencySource] = useState<string>('default'); // 'timezone', 'ipapi', 'ip-api', 'manual'
@@ -277,12 +277,14 @@ export const EnterprisePlan: React.FC<EnterprisePlanProps> = ({ credits = 50, se
     }
 
     if (!user) {
-      localStorage.setItem('pending_pricing_plan', JSON.stringify({
-        name: plan.name,
-        billingPeriod,
-        currency,
-        source: 'enterprise_plan'
-      }));
+      try {
+        localStorage.setItem('pending_pricing_plan', JSON.stringify({
+          name: plan.name,
+          billingPeriod,
+          currency,
+          source: 'enterprise_plan'
+        }));
+      } catch {}
       if (onLogin) {
         onLogin();
       } else {

@@ -6,62 +6,101 @@
 import { apiClient } from '../api/apiClient.js';
 import type { HumanTouchRequest } from '@shared-types/user.js';
 
+export interface HumanTouchQueueOptions {
+  scope?: 'workspace' | 'all';
+  intervalMs?: number;
+}
+
+function normalizeRecord(d: any): HumanTouchRequest & { id: string } {
+  return {
+    id: d.id,
+    userId: d.requesterId || d.requester_id || d.userId || '',
+    userEmail: d.emailReceipt || d.email_receipt || d.userEmail || '',
+    emailReceipt: d.emailReceipt || d.email_receipt || '',
+    assetType: d.assetType || d.asset_type || 'image',
+    assetUrl: d.storagePath || d.storage_path || d.assetUrl || '',
+    originalPrompt: d.originalPrompt || d.original_prompt || '',
+    modelsUsed: d.modelsUsed || d.models_used || '',
+    userComment: d.userComment || d.user_comment || '',
+    status: d.status || 'pending',
+    timestamp: d.createdAt ? new Date(d.createdAt).getTime() : (d.created_at ? new Date(d.created_at).getTime() : d.timestamp || Date.now()),
+    completedAssetUrl: d.completedStoragePath || d.completed_storage_path || d.completedAssetUrl || '',
+    completedComment: d.completedComment || d.completed_comment || '',
+    completedTimestamp: d.completedAt ? new Date(d.completedAt).getTime() : (d.completed_at ? new Date(d.completed_at).getTime() : undefined)
+  };
+}
+
 export async function submitHumanTouchRequest(
   _requestId: string,
   requestData: HumanTouchRequest
-): Promise<void> {
-  try {
-    await apiClient.post('/api/human-touch', {
-      originalPrompt: requestData.originalPrompt,
-      assetType: requestData.assetType || 'image',
-      assetUrl: requestData.assetUrl || '',
-      modelsUsed: requestData.modelsUsed || '',
-      userComment: requestData.userComment || 'Review requested',
-      emailReceipt: requestData.userEmail || requestData.emailReceipt || 'business@writopedia.com'
-    });
-  } catch (err) {
-    console.warn('[HumanTouchRepository] API submit error:', err);
-  }
+): Promise<{ success: boolean; requestId?: string; message?: string }> {
+  const res = await apiClient.post<{ success: boolean; requestId: string; message: string }>('/api/human-touch', {
+    originalPrompt: requestData.originalPrompt,
+    assetType: requestData.assetType || 'image',
+    assetUrl: requestData.assetUrl || '',
+    modelsUsed: requestData.modelsUsed || '',
+    userComment: requestData.userComment || 'Review requested',
+    emailReceipt: requestData.userEmail || requestData.emailReceipt || 'business@writopedia.com'
+  });
+  return res;
 }
 
 export function subscribeHumanTouchQueue(
   onData: (requests: (HumanTouchRequest & { id: string })[]) => void,
-  onError?: (err: any) => void
+  onError?: (err: any) => void,
+  options?: HumanTouchQueueOptions
 ): () => void {
   let isCancelled = false;
+  const scope = options?.scope === 'all' ? 'all' : 'workspace';
+  const intervalMs = options?.intervalMs || 8000;
 
-  apiClient.get<{ success: boolean; requests: any[] }>('/api/human-touch/queue')
-    .then((res) => {
-      if (!isCancelled && res?.requests) {
-        onData(res.requests as any);
-      }
-    })
-    .catch((err) => {
-      console.warn('[HumanTouchRepository] API fetch error:', err.message);
-      if (onError) onError(err);
-    });
+  const fetchQueue = () => {
+    if (isCancelled) return;
+    apiClient.get<{ success: boolean; requests: any[] }>(`/api/human-touch/queue?scope=${scope}`)
+      .then((res) => {
+        if (!isCancelled && Array.isArray(res?.requests)) {
+          const normalized = res.requests.map(normalizeRecord);
+          onData(normalized);
+        }
+      })
+      .catch((err) => {
+        if (!isCancelled) {
+          console.warn('[HumanTouchRepository] API fetch error:', err?.message);
+          if (onError) onError(err);
+        }
+      });
+  };
+
+  // Initial fetch immediately
+  fetchQueue();
+
+  // Background polling for real-time queue updates
+  const intervalId = setInterval(fetchQueue, intervalMs);
 
   return () => {
     isCancelled = true;
+    clearInterval(intervalId);
   };
 }
 
 export async function updateHumanTouchRequestStatus(
   requestId: string,
-  updateData: Partial<HumanTouchRequest>,
-  _userId?: string
-): Promise<void> {
-  try {
-    await apiClient.patch(`/api/human-touch/${requestId}`, updateData);
-  } catch (e) {
-    console.warn('[HumanTouchRepository] API update error:', e);
+  updateData: {
+    status?: 'pending' | 'in_review' | 'completed' | 'rejected';
+    completedAssetUrl?: string;
+    completedComment?: string;
   }
+): Promise<any> {
+  const res = await apiClient.patch(`/api/human-touch/${requestId}`, updateData);
+  return res;
 }
 
-export async function deleteHumanTouchRequest(requestId: string, _userId?: string): Promise<void> {
-  try {
-    await apiClient.delete(`/api/human-touch/${requestId}`);
-  } catch (e) {
-    console.warn('[HumanTouchRepository] API delete error:', e);
-  }
+export async function cancelHumanTouchRequest(requestId: string): Promise<any> {
+  const res = await apiClient.post(`/api/human-touch/${requestId}/cancel`, {});
+  return res;
 }
+
+export async function deleteHumanTouchRequest(requestId: string): Promise<void> {
+  await cancelHumanTouchRequest(requestId);
+}
+

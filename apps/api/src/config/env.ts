@@ -36,14 +36,27 @@ export interface ServerConfig {
   dbDriver: "supabase" | "firebase";
 }
 
+const rawGeminiKeys = process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY || "";
+const parsedGeminiPool = rawGeminiKeys
+  .split(",")
+  .map((k) => k.trim())
+  .filter(Boolean);
+
+const primaryGeminiKey =
+  process.env.GEMINI_API_KEY && !process.env.GEMINI_API_KEY.includes(",")
+    ? process.env.GEMINI_API_KEY.trim()
+    : parsedGeminiPool[0] || "";
+
+if (primaryGeminiKey && (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY.includes(","))) {
+  process.env.GEMINI_API_KEY = primaryGeminiKey;
+}
+
 export const serverConfig: ServerConfig = {
   port: parseInt(process.env.PORT || "3000", 10),
   nodeEnv: process.env.NODE_ENV || "development",
-  geminiApiKey: process.env.GEMINI_API_KEY || "",
+  geminiApiKey: primaryGeminiKey,
   geminiPaygApiKey: process.env.GEMINI_PAYG_API_KEY || process.env.GEMINI_PROD_API_KEY || "",
-  geminiApiKeyPool: process.env.GEMINI_API_KEYS
-    ? process.env.GEMINI_API_KEYS.split(",").map((k) => k.trim()).filter(Boolean)
-    : [],
+  geminiApiKeyPool: parsedGeminiPool,
   geminiBillingTier: (process.env.GEMINI_BILLING_TIER as any) ||
     (process.env.GEMINI_PAYG_API_KEY || process.env.GEMINI_PROD_API_KEY || process.env.GOOGLE_GENAI_USE_VERTEXAI === "true"
       ? "pay_as_you_go"

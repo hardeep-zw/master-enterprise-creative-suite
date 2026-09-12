@@ -26,14 +26,27 @@ export interface Gem {
   cost: number;
 }
 
-export interface AssetAnalysis {
-  theme: string;
-  tone: string;
-  colors: string[];
-  style: string;
-  composition: string;
-  mood: string;
+export interface VisualAnalysis {
+  theme?: string;
+  tone?: string;
+  colors?: string[];
+  style?: string;
+  composition?: string;
+  mood?: string;
 }
+
+export interface AudioMetadata {
+  transcript?: string;
+  durationSeconds?: number;
+  voice?: string;
+  model?: string;
+  provider?: string;
+  fallbackUsed?: boolean;
+  failoverState?: any;
+  providerCost?: number;
+}
+
+export interface AssetAnalysis extends VisualAnalysis, AudioMetadata {}
 
 export interface Asset {
   id: string;
@@ -41,6 +54,8 @@ export interface Asset {
   data: string;
   type: 'image' | 'doc' | 'video' | 'audio';
   selected: boolean;
+  storagePath?: string;
+  signedUrl?: string;
   analysis?: AssetAnalysis;
   isProductContext?: boolean;
   isFaceContext?: boolean;

@@ -34,19 +34,27 @@ export default function LegalPage({
   const ipRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Scroll to section based on hash on mount
-    const hash = window.location.hash;
-    if (hash === '#privacy') {
-      privacyRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    } else if (hash === '#terms') {
-      termsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    } else if (hash === '#refund') {
-      refundRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    } else if (hash === '#ip') {
-      ipRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    } else {
-      window.scrollTo(0, 0);
-    }
+    const scrollToHash = () => {
+      const hash = window.location.hash;
+      if (hash === '#privacy') {
+        privacyRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else if (hash === '#terms') {
+        termsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else if (hash === '#refund') {
+        refundRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else if (hash === '#ip') {
+        ipRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else {
+        window.scrollTo(0, 0);
+      }
+    };
+
+    const timer = setTimeout(scrollToHash, 60);
+    window.addEventListener('hashchange', scrollToHash);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('hashchange', scrollToHash);
+    };
   }, []);
 
   const scrollToSection = (ref: React.RefObject<HTMLDivElement | null>) => {
